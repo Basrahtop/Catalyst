@@ -1,0 +1,149 @@
+use aiken/builtin
+use aiken/list
+use aiken/transaction.{ScriptContext, Spend, OutputReference}
+use aiken/transaction/credential.{VerificationKey}
+
+// Platform admin public key hashes (3-of-3 multi-sig for security)
+// These will be replaced with actual keys during deployment
+const admin_key_1: ByteArray = #"000000000000000000000000000000000000000000000000000000"
+const admin_key_2: ByteArray = #"111111111111111111111111111111111111111111111111111111"  
+const admin_key_3: ByteArray = #"222222222222222222222222222222222222222222222222222222"
+
+pub type ReputationDatum {
+  sme_id: ByteArray,
+  marketplace_score: Int,      // 0-350 (order fulfillment rate)
+  feedback_score: Int,          // 0-150 (product review ratings)
+  platform_trust_score: Int,    // 0-300 (email + KYC verification)
+  financial_score: Int,         // 0-200 (on-time payment rate)
+  overall_score: Int,           // Sum of all scores (max 1000)
+  last_updated: Int,
+  update_count: Int,
+  calculation_hash: ByteArray,
+}
+
+pub type ReputationRedeemer {
+  UpdateScore
+  InitializeScore
+}
+
+validator reputation_registry {
+  spend(
+    datum: Option<ReputationDatum>,
+    redeemer: ReputationRedeemer,
+    _own_ref: OutputReference,
+    self: transaction.Output,
+    ctx: ScriptContext,
+  ) {
+    // Extract datum
+    expect Some(old_datum) = datum
+    
+    // Get transaction info
+    let tx = ctx.transaction
+    
+    // Find continuing output (updated UTXO)
+    expect Some(continuing_output) =
+      list.find(
+        tx.outputs,
+        fn(output) { output.address == self.address },
+      )
+    
+    // Parse new datum
+    expect new_datum: ReputationDatum =
+      when continuing_output.datum is {
+        transaction.InlineDatum(inline_datum) -> inline_datum
+        _ -> fail @"Expected inline datum"
+      }
+    
+    // Verify multi-sig authorization (all 3 admin keys must sign)
+    let has_admin1 = list.has(tx.extra_signatories, admin_key_1)
+    let has_admin2 = list.has(tx.extra_signatories, admin_key_2)
+    let has_admin3 = list.has(tx.extra_signatories, admin_key_3)
+    
+    let authorized = has_admin1 && has_admin2 && has_admin3
+    
+    when redeemer is {
+      UpdateScore -> {
+        // Validation rules for updates
+        and {
+          authorized?,
+          // Same SME
+          new_datum.sme_id == old_datum.sme_id,
+          // Increment counter
+          new_datum.update_count == old_datum.update_count + 1,
+          // Newer timestamp
+          new_datum.last_updated > old_datum.last_updated,
+          // Scores in valid range (0-100)
+          score_in_range(new_datum.marketplace_score)?,
+          score_in_range(new_datum.feedback_score)?,
+          score_in_range(new_datum.platform_trust_score)?,
+          score_in_range(new_datum.financial_score)?,
+          score_in_range(new_datum.overall_score)?,
+          // Verify overall score calculation
+          new_datum.overall_score == calculate_overall(new_datum),
+          // Ensure minimum ADA locked
+          value.lovelace_of(continuing_output.value) >= 2000000,
+        }
+      }
+      InitializeScore -> {
+        // First time score creation
+        and {
+          authorized?,
+          // Must be initial state
+          old_datum.update_count == 0,
+          // Set to 1
+          new_datum.update_count == 1,
+          // Valid scores
+          score_in_range(new_datum.marketplace_score)?,
+          score_in_range(new_datum.feedback_score)?,
+          score_in_range(new_datum.platform_trust_score)?,
+          score_in_range(new_datum.financial_score)?,
+          score_in_range(new_datum.overall_score)?,
+          // Verify calculation
+          new_datum.overall_score == calculate_overall(new_datum),
+          // Minimum ADA
+          value.lovelace_of(continuing_output.value) >= 2000000,
+        }
+      }
+    }
+  }
+
+  else(_) {
+    fail
+  }
+}
+
+// Helper: Validate score is between 0-100
+fn score_in_range(score: Int) -> Bool {
+  score >= 0 && score <= 100
+}
+
+// Helper: Calculate overall score (average of 4 scores)
+fn calculate_overall(datum: ReputationDatum) -> Int {
+  ( datum.marketplace_score + datum.feedback_score + datum.platform_trust_score + datum.financial_score ) / 4
+}
+
+// Tests
+test score_validation_accepts_valid_scores() {
+  score_in_range(0) && score_in_range(50) && score_in_range(100)
+}
+
+test score_validation_rejects_invalid_scores() {
+  !score_in_range(-1) && !score_in_range(101)
+}
+
+test calculate_overall_score_correctly() {
+  let test_datum =
+    ReputationDatum {
+      sme_id: #"74657374",  // "test" in hex
+      marketplace_score: 80,
+      feedback_score: 90,
+      platform_trust_score: 70,
+      financial_score: 60,
+      overall_score: 0,
+      last_updated: 0,
+      update_count: 0,
+      calculation_hash: #"0000000000000000000000000000000000000000000000000000000000000000",
+    }
+  
+  calculate_overall(test_datum) == 300  // 80 + 90 + 70 + 60
+}

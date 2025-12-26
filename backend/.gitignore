@@ -1,0 +1,11 @@
+node_modules
+# Keep environment variables out of version control
+.env
+.env.cardano
+
+/generated/prisma
+
+# Cardano admin keys - NEVER COMMIT
+/src/cardano/keys/
+/keys/
+/config/multisig-wallet.json

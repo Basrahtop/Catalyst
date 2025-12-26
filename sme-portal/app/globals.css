@@ -1,0 +1,36 @@
+/* --- Our New, Clean Stylesheet --- */
+/* 1. We import Tailwind's base styles */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* 2. We set our own "base" rules for the app */
+@layer base {
+  body {
+    /* THIS IS THE FIX:
+      We set the default text color for the *entire app* to a dark gray.
+      This will be inherited by all inputs, paragraphs, etc.,
+      fixing your "white text" bug permanently.
+    */
+    @apply bg-gray-50 text-gray-900;
+  }
+
+  /* This will make all of our form inputs look consistent
+    and have the correct text color.
+  */
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="number"],
+  input[type="date"],
+  input[type="tel"],
+  select,
+  textarea {
+    @apply w-full py-2 border border-gray-300 rounded-md shadow-sm;
+    @apply placeholder-gray-400 text-gray-900;
+    @apply focus:outline-none focus:ring-indigo-500 focus:border-indigo-500;
+    color: #000000 !important;
+    padding-left: 0.75rem; /* 12px default */
+    padding-right: 0.75rem; /* 12px default */
+  }
+}

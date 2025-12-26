@@ -1,0 +1,61 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.cardano
+*.env
+
+# Build outputs
+dist/
+build/
+out/
+.next/
+.expo/
+.expo-shared/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Prisma
+backend/prisma/migrations/.tmp/
+backend/generated/
+
+# Cardano sensitive files - NEVER COMMIT
+backend/src/cardano/keys/
+backend/keys/
+backend/config/multisig-wallet.json
+aiken-contracts/build/
+
+# Temporary files
+*.swp
+*.swo
+*~
+.temp/
+
+# Test coverage
+coverage/
+.nyc_output/
+
+# Production builds
+*.tgz
+
+# Misc
+.cache/
+.vercel/
+*.tsbuildinfo

@@ -1,0 +1,13 @@
+name = "catalyst-platform/contracts"
+version = "1.0.0"
+plutus = "v2"
+compiler = "v1.1.0"
+license = "Apache-2.0"
+description = "Catalyst Platform Smart Contracts"
+
+[[dependencies]]
+name = "aiken-lang/stdlib"
+version = "main"
+source = "github"
+
+[config]

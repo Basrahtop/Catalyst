@@ -1,0 +1,19 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",         /* Set the JavaScript version to create */
+    "module": "CommonJS",      /* THIS IS THE FIX: Tell it to create old-style CommonJS */
+    "moduleResolution": "Node",  /* THIS IS THE FIX: Tell it to find packages the Node.js way */
+    "esModuleInterop": true,     /* This is the "magic wand" that lets `import` work with `require` */
+    "forceConsistentCasingInFileNames": true,
+    "strict": true,            /* Keep us safe */
+    "skipLibCheck": true,      /* Don't type-check 3rd-party code */
+    "outDir": "./dist",        /* Put the compiled JS files in a "dist" folder */
+    "rootDir": "./src"         /* Our source code is in the "src" folder */
+  },
+  "include": [
+    "src/**/*"                 /* Only compile files in the "src" folder */
+  ],
+  "exclude": [
+    "node_modules"
+  ]
+}
