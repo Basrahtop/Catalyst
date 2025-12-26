@@ -1,0 +1,480 @@
+// This is our V5.0 schema - Multi-Currency Support (NGN, ADA, USDM)
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// --- 1. The "User World" ---
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  roles     Role[]   @default([CUSTOMER])
+  profileImage String?
+
+  platformTrustScore Int @default(100)
+  financialScore     Int @default(0)
+
+  firstName            String?
+  lastName             String?
+  phone                String? @unique
+  
+  isEmailVerified      Boolean @default(false)
+  emailVerificationToken String? @unique
+  verification         Verification?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  sme      SME?
+  orders   Order[]  @relation("CustomerOrders")
+  funderOf FundingRequest[] @relation("P2PLender")
+  agent    Agent?
+  orgUser  OrgUser?
+  reviews  Review[] @relation("UserReviews")
+  wallet   Wallet?
+  investments Investment[] @relation("InvestorInvestments")
+  installmentShares InstallmentShare[] @relation("InvestorShares")
+  cardanoWallet CardanoWallet? @relation("CardanoWallet")
+  
+  sponsoringAgent   Agent?  @relation("SponsoredUsers", fields: [sponsoringAgentId], references: [id])
+  sponsoringAgentId String?
+  
+  // --- THIS IS THE NEW "LEDGER" LINK ---
+  sentTransactions     Transaction[] @relation("Sender")
+  receivedTransactions Transaction[] @relation("Recipient")
+}
+
+enum Role {
+  CUSTOMER
+  SME
+  AGENT
+  P2P_LENDER
+  ADMIN
+}
+
+model SME {
+  id           String @id @default(cuid())
+  businessName String
+  
+  marketplaceScore Int @default(0)
+  feedbackScore    Int @default(0)
+
+  user   User   @relation(fields: [userId], references: [id])
+  userId String @unique
+
+  products Product[]
+  orders   Order[]   @relation("SMEOrders")
+  fundingRequests FundingRequest[]
+  paymentInstallments PaymentInstallment[]
+  reputationHistory ReputationHistory[] @relation("ReputationHistory")
+  riskFundContributions RiskFundContribution[] @relation("RiskFundContributions")
+}
+
+model Agent {
+  id    String @id @default(cuid())
+  agentReputation Int @default(300)
+  
+  user   User   @relation(fields: [userId], references: [id])
+  userId String @unique
+  
+  sponsoredUsers User[] @relation("SponsoredUsers")
+  fundingRequests FundingRequest[] @relation("AgentRequests")
+}
+
+// --- 2. The "E-Commerce" World (UPGRADED V4.0) ---
+model Product {
+  id          String      @id @default(cuid())
+  name        String
+  description String
+  price       Int // In kobo
+  imageUrl    String // Main thumbnail
+  
+  // --- NEW "RICH DATA" FIELDS ---
+  galleryImages  String[] // Array of image URLs
+  features       String[] // Array of bullet points
+  specifications Json?    // Flexible Key-Value pairs
+  stock          Int      @default(1) // Inventory tracking
+  category       String   @default("General") // Flexible category
+  // ----------------------------
+
+  sme         SME         @relation(fields: [smeId], references: [id])
+  smeId       String
+  orderItems  OrderItem[]
+  reviews     Review[]
+  
+  transactions Transaction[] @relation("ProductPurchase")
+}
+
+model Order {
+  id         String      @id @default(cuid())
+  total      Int
+  status     OrderStatus @default(PENDING)
+  createdAt  DateTime    @default(now())
+  
+  customer   User     @relation("CustomerOrders", fields: [customerId], references: [id])
+  customerId String
+  sme        SME      @relation("SMEOrders", fields: [smeId], references: [id])
+  smeId      String
+  items      OrderItem[]
+  
+  transaction Transaction?
+}
+
+enum OrderStatus { 
+  PENDING
+  COMPLETED
+  SHIPPED
+  CANCELLED 
+}
+
+model OrderItem {
+  id       String @id @default(cuid())
+  quantity Int    @default(1)
+  price    Int
+  order    Order  @relation(fields: [orderId], references: [id])
+  orderId  String
+  product   Product @relation(fields: [productId], references: [id])
+  productId String
+}
+
+// --- 3. The "Funding" World ---
+model FundingRequest {
+  id        String        @id @default(cuid())
+  amount    Int           // Amount in kobo (Naira base currency)
+  amountFunded Int @default(0)
+  acceptedCurrencies Currency[] @default([NGN]) // Currencies SME accepts
+  profitSharePercentage Float
+  termInMonths          Int
+  repaymentFrequency    RepaymentFrequency @default(MONTHLY_PROFIT_SHARE)
+
+  purpose   String
+  status    FundingStatus @default(PENDING)
+  declineReason String?
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  
+  sme    SME    @relation(fields: [smeId], references: [id])
+  smeId  String
+  
+  p2pFunder   User?   @relation("P2PLender", fields: [p2pFunderId], references: [id])
+  p2pFunderId String?
+  orgFunder    Organization? @relation("OrgFunder", fields: [orgFunderId], references: [id])
+  orgFunderId  String?
+  
+  agent   Agent?   @relation("AgentRequests", fields: [agentId], references: [id])
+  agentId String?
+  
+  paymentInstallments PaymentInstallment[]
+  investments Investment[]
+}
+
+enum RepaymentFrequency { 
+  MONTHLY_PROFIT_SHARE
+  END_OF_TERM_LUMP_SUM 
+}
+
+enum FundingStatus { 
+  PENDING
+  PARTIALLY_FUNDED
+  APPROVED
+  DECLINED
+  COMPLETED 
+}
+
+enum Currency {
+  NGN
+  ADA
+  USDM
+}
+
+// --- Investment Tracking Model ---
+model Investment {
+  id        String   @id @default(cuid())
+  amount    BigInt   // Amount invested in smallest unit (kobo/lovelace/microUSDM)
+  currency  Currency @default(NGN) // Currency of investment
+  exchangeRateToNGN Float?  // Exchange rate at time of investment (for ADA/USDM)
+  amountInNGN Int?    // Cached conversion to NGN for reporting and calculations
+  createdAt DateTime @default(now())
+  
+  investor   User           @relation("InvestorInvestments", fields: [investorId], references: [id])
+  investorId String
+  
+  fundingRequest   FundingRequest @relation(fields: [fundingRequestId], references: [id])
+  fundingRequestId String
+  
+  @@index([investorId])
+  @@index([fundingRequestId])
+  @@index([currency])
+}
+
+// --- 4. THE "SMART LEDGER" & "TRANSACTION LEDGER" ---
+
+// This is our "Schedule"
+model PaymentInstallment {
+  id        String   @id @default(cuid())
+  
+  installmentNumber Int
+  dueDate             DateTime
+  type                InstallmentType
+  status              InstallmentStatus @default(PENDING)
+  
+  month     Int?
+  year      Int?
+  
+  reportedProfit        Int?
+  lenderGrossShare      Int?
+  smeGrossShare         Int?
+  platformFeeFromLender Int?
+  platformFeeFromSME    Int?
+  agentCommission       Int?
+  totalDueFromSME       Int?
+  totalDueToLender      Int?
+  totalDueToAgent       Int? 
+  
+  platformTotalRevenue   Int?
+  platformNetRevenue     Int?
+  riskWalletContribution Int?
+  platformFinalProfit    Int?
+  
+  paidAt                DateTime?
+  amountPaid            Int?
+  
+  sme       SME            @relation(fields: [smeId], references: [id])
+  smeId     String
+  request   FundingRequest @relation(fields: [requestId], references: [id])
+  requestId String
+  
+  transaction Transaction?
+  investorShares InstallmentShare[]
+  
+  @@unique([requestId, installmentNumber])
+}
+
+// Track individual investor shares per installment
+model InstallmentShare {
+  id        String   @id @default(cuid())
+  
+  investorId String
+  investor   User @relation("InvestorShares", fields: [investorId], references: [id])
+  
+  installmentId String
+  installment   PaymentInstallment @relation(fields: [installmentId], references: [id], onDelete: Cascade)
+  
+  investmentAmount BigInt // How much this investor put in total (smallest unit)
+  investmentCurrency Currency @default(NGN) // Currency investor used
+  sharePercentage  Float // Their percentage of total funding
+  expectedShare    BigInt? // Calculated share when profit is reported (in NGN)
+  paidAmount       BigInt? // Amount actually paid to this investor
+  paymentCurrency  Currency? // Currency of payment (converted back to investor's currency)
+  paidAt           DateTime?
+  
+  createdAt DateTime @default(now())
+  
+  @@unique([installmentId, investorId])
+  @@index([investorId])
+  @@index([installmentId])
+}
+
+enum InstallmentType { 
+  PROFIT_SHARE
+  FINAL_PAYMENT 
+}
+
+enum InstallmentStatus { 
+  PENDING
+  UPCOMING
+  LATE
+  PAID 
+}
+
+// This is our "Global Transaction Ledger"
+model Transaction {
+  id        String   @id @default(cuid())
+  amount    BigInt   // Amount in smallest unit (kobo/lovelace/microUSDM)
+  currency  Currency @default(NGN) // Currency of transaction
+  exchangeRateToNGN Float? // Exchange rate at transaction time (for reporting)
+  
+  type      TransactionType
+  status    TransactionStatus @default(COMPLETED)
+  
+  notes     String?
+  createdAt DateTime @default(now())
+  
+  sender    User     @relation("Sender", fields: [senderId], references: [id])
+  senderId  String
+  recipient User     @relation("Recipient", fields: [recipientId], references: [id])
+  recipientId String
+  
+  installment   PaymentInstallment? @relation(fields: [installmentId], references: [id])
+  installmentId String?             @unique
+  
+  order   Order? @relation(fields: [orderId], references: [id])
+  orderId String? @unique
+  
+  product   Product? @relation("ProductPurchase", fields: [productId], references: [id])
+  productId String?
+}
+
+enum TransactionType {
+  DEPOSIT
+  WITHDRAWAL
+  TRANSFER
+  PROFIT_SHARE
+  AGENT_FEE
+  PLATFORM_FEE
+  ORDER
+}
+
+enum TransactionStatus {
+  PENDING
+  COMPLETED
+  FAILED
+}
+
+// --- 5. The "Partner" World ---
+model Organization {
+  id   String @id @default(cuid())
+  name String
+  type OrgType
+  users OrgUser[]
+  fundedRequests FundingRequest[] @relation("OrgFunder")
+}
+
+enum OrgType { 
+  BANK
+  AGENCY 
+}
+
+model OrgUser {
+  id    String @id @default(cuid())
+  role  String @default("officer")
+  user   User   @relation(fields: [userId], references: [id])
+  userId String @unique
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  organizationId String
+}
+
+// --- 6. The "Review" World ---
+model Review {
+  id        String   @id @default(cuid())
+  rating    Int
+  comment   String?
+  createdAt DateTime @default(now())
+  user   User   @relation("UserReviews", fields: [userId], references: [id])
+  userId String
+  product   Product @relation(fields: [productId], references: [id])
+  productId String
+}
+
+// --- 7. The "Wallet" World ---
+model Wallet {
+  id      String @id @default(cuid())
+  
+  // Legacy Naira balance (keep for backward compatibility)
+  balance Int @default(0) // Balance in kobo (DEPRECATED - use balanceNGN)
+  
+  // Multi-currency balances
+  balanceNGN  BigInt @default(0) // Nigerian Naira balance in kobo
+  balanceADA  BigInt @default(0) // Cardano ADA balance in lovelace (1 ADA = 1,000,000 lovelace)
+  balanceUSDM BigInt @default(0) // USDM Stablecoin balance in microUSDM (1 USDM = 1,000,000 microUSDM)
+  
+  user   User   @relation(fields: [userId], references: [id])
+  userId String @unique
+}
+
+// --- 8. The "Verification" World ---
+model Verification {
+  id        String   @id @default(cuid())
+  ninStatus     VerificationStatus @default(UNVERIFIED)
+  bvnStatus     VerificationStatus @default(UNVERIFIED)
+  passportStatus VerificationStatus @default(UNVERIFIED)
+  addressStatus  VerificationStatus @default(UNVERIFIED)
+  verifiedAddress String?
+  user   User   @relation(fields: [userId], references: [id])
+  userId String @unique
+}
+
+enum VerificationStatus { 
+  UNVERIFIED
+  PENDING
+  VERIFIED
+  FAILED 
+}
+
+// --- 9. The "Cardano Integration" World ---
+model CardanoWallet {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  user            User     @relation("CardanoWallet", fields: [userId], references: [id], onDelete: Cascade)
+  address         String   @unique
+  stakingAddress  String?
+  walletType      String   // "nami", "eternl", "flint", etc.
+  
+  // Privacy-preserving reputation identifier (hash of smeId + address)
+  reputationId    String?  @unique // Submitted on-chain instead of wallet address
+  
+  // Verification tracking
+  verified        Boolean  @default(false) // Has signature been verified?
+  signature       String?  // Cryptographic proof of ownership
+  verifiedAt      DateTime? // When was it verified?
+  
+  // Wallet replacement tracking (for lost wallets)
+  previousAddresses String[] // History of old wallet addresses
+  isReplacement   Boolean  @default(false) // Is this a replacement wallet?
+  
+  connectedAt     DateTime @default(now())
+  lastUsed        DateTime @updatedAt
+  
+  @@index([userId])
+  @@index([address])
+  @@index([reputationId])
+}
+
+model ReputationHistory {
+  id                    String   @id @default(cuid())
+  smeId                 String
+  sme                   SME      @relation("ReputationHistory", fields: [smeId], references: [id], onDelete: Cascade)
+  
+  marketplaceScore      Int
+  feedbackScore         Int
+  platformTrustScore    Int
+  financialScore        Int
+  overallScore          Int
+  
+  // On-chain submission data
+  cardanoTxHash         String?  @unique // On-chain transaction hash
+  cardanoUTxORef        String?  // UTXO reference on Cardano
+  reputationId          String?  // Privacy-preserving identifier (not wallet address)
+  verified              Boolean  @default(false) // Was wallet verified when submitted?
+  calculationHash       String   // Verification hash
+  
+  timestamp             DateTime @default(now())
+  
+  @@index([smeId])
+  @@index([cardanoTxHash])
+  @@index([reputationId])
+  @@index([timestamp])
+}
+
+model RiskFundContribution {
+  id              String   @id @default(cuid())
+  smeId           String
+  sme             SME      @relation("RiskFundContributions", fields: [smeId], references: [id], onDelete: Cascade)
+  
+  amount          BigInt   // Amount in smallest unit (kobo/lovelace/microUSDM)
+  currency        Currency // "NGN", "ADA", "USDM"
+  cardanoTxHash   String?
+  conversionRate  Float?   // Exchange rate at time of conversion
+  
+  timestamp       DateTime @default(now())
+  
+  @@index([smeId])
+  @@index([cardanoTxHash])
+  @@index([timestamp])
+}

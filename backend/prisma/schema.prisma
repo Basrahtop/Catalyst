@@ -1,4 +1,4 @@
-// This is our FINAL, V4.0 schema (Rich Product Data)
+// This is our V5.0 schema - Multi-Currency Support (NGN, ADA, USDM)
 
 datasource db {
   provider = "postgresql"
@@ -146,8 +146,9 @@ model OrderItem {
 // --- 3. The "Funding" World ---
 model FundingRequest {
   id        String        @id @default(cuid())
-  amount    Int
+  amount    Int           // Amount in kobo (Naira base currency)
   amountFunded Int @default(0)
+  acceptedCurrencies Currency[] @default([NGN]) // Currencies SME accepts
   profitSharePercentage Float
   termInMonths          Int
   repaymentFrequency    RepaymentFrequency @default(MONTHLY_PROFIT_SHARE)
@@ -186,10 +187,19 @@ enum FundingStatus {
   COMPLETED 
 }
 
+enum Currency {
+  NGN
+  ADA
+  USDM
+}
+
 // --- Investment Tracking Model ---
 model Investment {
   id        String   @id @default(cuid())
-  amount    Int      // Amount invested by this investor in kobo
+  amount    BigInt   // Amount invested in smallest unit (kobo/lovelace/microUSDM)
+  currency  Currency @default(NGN) // Currency of investment
+  exchangeRateToNGN Float?  // Exchange rate at time of investment (for ADA/USDM)
+  amountInNGN Int?    // Cached conversion to NGN for reporting and calculations
   createdAt DateTime @default(now())
   
   investor   User           @relation("InvestorInvestments", fields: [investorId], references: [id])
@@ -200,6 +210,7 @@ model Investment {
   
   @@index([investorId])
   @@index([fundingRequestId])
+  @@index([currency])
 }
 
 // --- 4. THE "SMART LEDGER" & "TRANSACTION LEDGER" ---
@@ -255,10 +266,12 @@ model InstallmentShare {
   installmentId String
   installment   PaymentInstallment @relation(fields: [installmentId], references: [id], onDelete: Cascade)
   
-  investmentAmount Int  // How much this investor put in total
+  investmentAmount BigInt // How much this investor put in total (smallest unit)
+  investmentCurrency Currency @default(NGN) // Currency investor used
   sharePercentage  Float // Their percentage of total funding
-  expectedShare    Int?  // Calculated share when profit is reported
-  paidAmount       Int?  // Amount actually paid to this investor
+  expectedShare    BigInt? // Calculated share when profit is reported (in NGN)
+  paidAmount       BigInt? // Amount actually paid to this investor
+  paymentCurrency  Currency? // Currency of payment (converted back to investor's currency)
   paidAt           DateTime?
   
   createdAt DateTime @default(now())
@@ -283,7 +296,9 @@ enum InstallmentStatus {
 // This is our "Global Transaction Ledger"
 model Transaction {
   id        String   @id @default(cuid())
-  amount    Int // in Kobo
+  amount    BigInt   // Amount in smallest unit (kobo/lovelace/microUSDM)
+  currency  Currency @default(NGN) // Currency of transaction
+  exchangeRateToNGN Float? // Exchange rate at transaction time (for reporting)
   
   type      TransactionType
   status    TransactionStatus @default(COMPLETED)
@@ -360,7 +375,15 @@ model Review {
 // --- 7. The "Wallet" World ---
 model Wallet {
   id      String @id @default(cuid())
-  balance Int    @default(0) // Balance in kobo
+  
+  // Legacy Naira balance (keep for backward compatibility)
+  balance Int @default(0) // Balance in kobo (DEPRECATED - use balanceNGN)
+  
+  // Multi-currency balances
+  balanceNGN  BigInt @default(0) // Nigerian Naira balance in kobo
+  balanceADA  BigInt @default(0) // Cardano ADA balance in lovelace (1 ADA = 1,000,000 lovelace)
+  balanceUSDM BigInt @default(0) // USDM Stablecoin balance in microUSDM (1 USDM = 1,000,000 microUSDM)
+  
   user   User   @relation(fields: [userId], references: [id])
   userId String @unique
 }
@@ -444,8 +467,8 @@ model RiskFundContribution {
   smeId           String
   sme             SME      @relation("RiskFundContributions", fields: [smeId], references: [id], onDelete: Cascade)
   
-  amount          Int      // In kobo (NGN), lovelace (ADA), or microUSDM
-  currency        String   // "NGN", "ADA", "USDM"
+  amount          BigInt   // Amount in smallest unit (kobo/lovelace/microUSDM)
+  currency        Currency // "NGN", "ADA", "USDM"
   cardanoTxHash   String?
   conversionRate  Float?   // Exchange rate at time of conversion
   
