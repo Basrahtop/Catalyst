@@ -2,16 +2,19 @@
  * Deploy Investment Escrow Contract to Cardano
  * 
  * Usage:
- *   npm run deploy:escrow -- --network preprod
- *   npm run deploy:escrow -- --network mainnet
+ *   npm run deploy:escrow:preprod
+ *   npm run deploy:escrow:mainnet
  */
 
-import { Lucid, Blockfrost } from 'lucid-cardano';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as dotenv from 'dotenv';
+import { fileURLToPath } from 'url';
 
 dotenv.config();
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 interface PlutusValidator {
   title: string;
@@ -26,8 +29,11 @@ interface PlutusJson {
 async function deployEscrowContract(network: 'Preprod' | 'Mainnet') {
   console.log(`\n🚀 Deploying Investment Escrow Contract to ${network}...\n`);
 
+  // Dynamic import for lucid-cardano (ESM package)
+  const { Lucid, Blockfrost } = await import('lucid-cardano');
+
   // 1. Load compiled Plutus script
-  const plutusJsonPath = path.join(__dirname, '../../../aiken-contracts/plutus.json');
+  const plutusJsonPath = path.resolve(process.cwd(), '../aiken-contracts/plutus.json');
   
   if (!fs.existsSync(plutusJsonPath)) {
     console.error('❌ plutus.json not found!');
@@ -67,7 +73,7 @@ async function deployEscrowContract(network: 'Preprod' | 'Mainnet') {
 
   // 3. Calculate script address
   const scriptAddress = lucid.utils.validatorToAddress({
-    type: 'PlutusV3',
+    type: 'PlutusV2',  // lucid-cardano 0.10.7 supports V1 and V2
     script: escrowValidator.compiledCode,
   });
 
@@ -76,7 +82,7 @@ async function deployEscrowContract(network: 'Preprod' | 'Mainnet') {
   console.log(`   Script CBOR: ${escrowValidator.compiledCode.slice(0, 60)}...`);
 
   // 4. Save to .env file
-  const envPath = path.join(__dirname, '../../.env');
+  const envPath = path.resolve(process.cwd(), '.env');
   let envContent = fs.readFileSync(envPath, 'utf-8');
 
   // Update or add escrow variables
@@ -118,8 +124,8 @@ async function deployEscrowContract(network: 'Preprod' | 'Mainnet') {
 
   console.log(`\n✅ Deployment complete!`);
   console.log(`\n📝 Next steps:`);
-  console.log(`   1. Test locking funds: npm run test:escrow:lock`);
-  console.log(`   2. Test releasing funds: npm run test:escrow:release`);
+  console.log(`   1. Update investment flow to use escrow`);
+  console.log(`   2. Test locking funds with real wallet`);
   console.log(`   3. Monitor on explorer: https://${network.toLowerCase()}.cardanoscan.io/address/${scriptAddress}`);
 }
 
@@ -129,7 +135,7 @@ const networkArg = args.find((arg) => arg.startsWith('--network='));
 const network = networkArg?.split('=')[1] || 'Preprod';
 
 if (network !== 'Preprod' && network !== 'Mainnet') {
-  console.error('❌ Invalid network. Use: --network=preprod or --network=mainnet');
+  console.error('❌ Invalid network. Use: --network=Preprod or --network=Mainnet');
   process.exit(1);
 }
 

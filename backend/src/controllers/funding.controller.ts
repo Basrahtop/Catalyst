@@ -4,8 +4,10 @@ import {
   RepaymentFrequency, 
   FundingStatus,
   InstallmentType,
-  InstallmentStatus
+  InstallmentStatus,
+  Currency
 } from '@prisma/client';
+import { multiCurrencyInvestmentService } from '../services/multi-currency-investment.service';
 
 const prisma = new PrismaClient();
 
@@ -486,7 +488,7 @@ export const getInvestmentInstallments = async (req: Request, res: Response) => 
 // --- PATCH /api/funding-requests/:id/approve ---
 export const approveRequest = async (req: Request, res: Response) => {
   const { id: requestId } = req.params;
-  const { fundingAmount } = req.body; // Amount in kobo
+  const { fundingAmount, currency = Currency.NGN } = req.body; // Amount in smallest unit, currency
   const userId = req.userId; 
 
   if (!userId) {
@@ -497,136 +499,45 @@ export const approveRequest = async (req: Request, res: Response) => {
     return res.status(400).json({ error: 'Valid funding amount is required.' });
   }
 
+  if (!Object.values(Currency).includes(currency)) {
+    return res.status(400).json({ error: 'Invalid currency. Supported: NGN, ADA, USDM' });
+  }
+
   try {
-    const approvedRequest = await prisma.$transaction(async (tx) => {
-      
-      const request = await tx.fundingRequest.findUnique({
-        where: { id: requestId },
-      });
-
-      if (!request) {
-        throw new Error('Request not found.');
-      }
-      if (request.status !== FundingStatus.PENDING && request.status !== FundingStatus.PARTIALLY_FUNDED) {
-        throw new Error('This request is not available for funding.');
-      }
-
-      // Calculate remaining amount needed
-      const remainingAmount = request.amount - request.amountFunded;
-      
-      // Validate funding amount doesn't exceed remaining amount
-      if (fundingAmount > remainingAmount) {
-        throw new Error(`Funding amount cannot exceed remaining amount of ${remainingAmount / 100} NGN.`);
-      }
-
-      // Check investor's wallet balance
-      const investorWallet = await tx.wallet.findUnique({
-        where: { userId: userId },
-      });
-
-      if (!investorWallet || investorWallet.balance < fundingAmount) {
-        throw new Error('Insufficient wallet balance.');
-      }
-
-      // Deduct from investor's wallet
-      await tx.wallet.update({
-        where: { userId: userId },
-        data: {
-          balance: {
-            decrement: fundingAmount,
-          },
-        },
-      });
-
-      // Add to SME's wallet
-      const sme = await tx.sME.findUnique({
-        where: { id: request.smeId },
-        include: { user: true },
-      });
-
-      if (!sme) {
-        throw new Error('SME not found.');
-      }
-
-      const smeWallet = await tx.wallet.findUnique({
-        where: { userId: sme.userId },
-      });
-
-      if (smeWallet) {
-        await tx.wallet.update({
-          where: { userId: sme.userId },
-          data: {
-            balance: {
-              increment: fundingAmount,
-            },
-          },
-        });
-      } else {
-        // Create wallet if doesn't exist
-        await tx.wallet.create({
-          data: {
-            userId: sme.userId,
-            balance: fundingAmount,
-          },
-        });
-      }
-
-      // Create investment record for this investor
-      await tx.investment.create({
-        data: {
-          amount: fundingAmount,
-          investorId: userId,
-          fundingRequestId: requestId,
-        },
-      });
-
-      // Create transaction record
-      await tx.transaction.create({
-        data: {
-          amount: fundingAmount,
-          type: 'TRANSFER',
-          status: 'COMPLETED',
-          senderId: userId,
-          recipientId: sme.userId,
-          notes: `Investment funding for ${sme.businessName}`,
-        },
-      });
-
-      // Calculate new total funded amount
-      const newAmountFunded = request.amountFunded + fundingAmount;
-      const isFullyFunded = newAmountFunded >= request.amount;
-
-      const orgUser = await tx.orgUser.findUnique({
-        where: { userId: userId },
-      });
-
-      let dataToUpdate: any = {
-        amountFunded: newAmountFunded,
-        status: isFullyFunded ? FundingStatus.APPROVED : FundingStatus.PARTIALLY_FUNDED,
-      };
-
-      // Only set funder if this is the first funding (for backwards compatibility)
-      if (request.amountFunded === 0) {
-        if (orgUser) {
-          dataToUpdate.orgFunderId = orgUser.organizationId;
-        } else {
-          dataToUpdate.p2pFunderId = userId;
-        }
-      }
-      
-      const updatedRequest = await tx.fundingRequest.update({
-        where: { id: requestId },
-        data: dataToUpdate,
-      });
-
-      // --- ONLY CREATE PAYMENT SCHEDULE IF FULLY FUNDED ---
-      if (isFullyFunded) {
-        await createPaymentSchedule(updatedRequest, tx);
-      }
-      // --- END OF "SMART LEDGER" ---
-
-      return updatedRequest; 
+    // Use multi-currency investment service
+    const result = await multiCurrencyInvestmentService.processInvestment({
+      investorId: userId,
+      fundingRequestId: requestId,
+      amount: BigInt(fundingAmount),
+      currency,
     });
+
+    // Check if funding request is now fully funded
+    const request = await prisma.fundingRequest.findUnique({
+      where: { id: requestId },
+      include: { sme: { include: { user: true } } },
+    });
+
+    if (!request) {
+      throw new Error('Funding request not found.');
+    }
+
+    const isFullyFunded = request.amountFunded >= request.amount;
+
+    // If fully funded, create payment schedule and release escrow funds
+    if (isFullyFunded && request.status === FundingStatus.APPROVED) {
+      // Create payment schedule
+      await prisma.$transaction(async (tx) => {
+        await createPaymentSchedule(request, tx);
+      });
+
+      // Release any escrow funds to SME
+      if (currency !== Currency.NGN) {
+        await multiCurrencyInvestmentService.releaseEscrowFunds(requestId);
+      }
+    }
+
+    const approvedRequest = request;
 
     res.status(200).json(approvedRequest);
 

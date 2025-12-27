@@ -18,6 +18,7 @@ import uploadRoutes from './routes/upload.routes';
 import cardanoRoutes from './routes/cardano.routes';
 import reputationRoutes from './routes/reputation.routes';
 import reputationOnChainRoutes from './routes/reputation-onchain.routes';
+import exchangeRateRoutes from './routes/exchange-rate.routes';
 
 const app = express();
 const PORT = 8000;
@@ -46,6 +47,7 @@ async function main() {
   app.use('/api/cardano', cardanoRoutes);
   app.use('/api/reputation', reputationRoutes);
   app.use('/api/reputation', reputationOnChainRoutes); // On-chain endpoints
+  app.use('/api/exchange-rates', exchangeRateRoutes); // Multi-currency exchange rates
  
   // Initialize Cardano Oracle Service (if enabled)
   if (process.env.CARDANO_ENABLED === 'true') {

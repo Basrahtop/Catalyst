@@ -202,6 +202,11 @@ model Investment {
   amountInNGN Int?    // Cached conversion to NGN for reporting and calculations
   createdAt DateTime @default(now())
   
+  // Blockchain transaction tracking (for ADA/USDM)
+  blockchainTxHash String? // Transaction hash when locking funds in escrow
+  releaseTxHash    String? // Transaction hash when releasing funds to SME
+  refundTxHash     String? // Transaction hash if investor reclaims funds
+  
   investor   User           @relation("InvestorInvestments", fields: [investorId], references: [id])
   investorId String
   
@@ -211,6 +216,7 @@ model Investment {
   @@index([investorId])
   @@index([fundingRequestId])
   @@index([currency])
+  @@index([blockchainTxHash])
 }
 
 // --- 4. THE "SMART LEDGER" & "TRANSACTION LEDGER" ---
@@ -306,6 +312,9 @@ model Transaction {
   notes     String?
   createdAt DateTime @default(now())
   
+  // Blockchain transaction tracking (for ADA/USDM)
+  blockchainTxHash String? // Transaction hash on Cardano blockchain
+  
   sender    User     @relation("Sender", fields: [senderId], references: [id])
   senderId  String
   recipient User     @relation("Recipient", fields: [recipientId], references: [id])
@@ -319,6 +328,8 @@ model Transaction {
   
   product   Product? @relation("ProductPurchase", fields: [productId], references: [id])
   productId String?
+  
+  @@index([blockchainTxHash])
 }
 
 enum TransactionType {
