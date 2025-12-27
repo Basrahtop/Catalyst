@@ -7,7 +7,6 @@
 import { PrismaClient, Currency, InstallmentStatus, TransactionType } from '@prisma/client';
 import { exchangeRateService } from './exchange-rate.service';
 import { walletBalanceService } from './wallet-balance.service';
-import { cardanoPaymentService } from '../cardano/services/cardano-payment.service';
 
 const prisma = new PrismaClient();
 
@@ -233,6 +232,7 @@ class MultiCurrencyProfitService {
     }
 
     // Send batch payment on blockchain
+    const { cardanoPaymentService } = await import('../cardano/services/cardano-payment.service');
     const txHash = await cardanoPaymentService.sendBatchPayment(
       smeWallet.address,
       payments,

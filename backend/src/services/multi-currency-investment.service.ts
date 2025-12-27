@@ -9,7 +9,6 @@
 import { PrismaClient, Currency } from '@prisma/client';
 import { walletBalanceService } from './wallet-balance.service';
 import { exchangeRateService } from './exchange-rate.service';
-import { investmentEscrowService } from '../cardano/services/investment-escrow.service';
 
 const prisma = new PrismaClient();
 
@@ -174,6 +173,7 @@ class MultiCurrencyInvestmentService {
     }
 
     // 3. Lock funds in smart contract escrow
+    const { investmentEscrowService } = await import('../cardano/services/investment-escrow.service');
     const txHash = await investmentEscrowService.lockFunds(
       cardanoWallet.address,
       smeCardanoWallet.address,
@@ -247,6 +247,7 @@ class MultiCurrencyInvestmentService {
     }
 
     // Release funds from escrow (oracle-authorized)
+    const { investmentEscrowService } = await import('../cardano/services/investment-escrow.service');
     const txHash = await investmentEscrowService.releaseFunds(fundingRequestId);
 
     // Update investment records with release transaction
