@@ -379,10 +379,12 @@ model Wallet {
   // Legacy Naira balance (keep for backward compatibility)
   balance Int @default(0) // Balance in kobo (DEPRECATED - use balanceNGN)
   
-  // Multi-currency balances
-  balanceNGN  BigInt @default(0) // Nigerian Naira balance in kobo
-  balanceADA  BigInt @default(0) // Cardano ADA balance in lovelace (1 ADA = 1,000,000 lovelace)
-  balanceUSDM BigInt @default(0) // USDM Stablecoin balance in microUSDM (1 USDM = 1,000,000 microUSDM)
+  // Platform-managed balance (Naira only)
+  balanceNGN BigInt @default(0) // Nigerian Naira balance in kobo (platform-controlled)
+  
+  // NOTE: ADA and USDM balances are NOT stored here.
+  // They are queried in real-time from the user's connected CardanoWallet
+  // via Blockfrost API. See CardanoWallet model and cardano-payment.service.ts
   
   user   User   @relation(fields: [userId], references: [id])
   userId String @unique

@@ -340,20 +340,23 @@ A comprehensive SME financing platform with blockchain-verified reputation:
   - Multi-currency tracking (NGN, ADA, USDM)
   - Contribution history UI
 
-- [ ] **Option 4: International Investment (ADA/USDM)** 🔥 **IN PROGRESS - 25% Complete**
+- [ ] **Option 4: International Investment (ADA/USDM)** 🔥 **IN PROGRESS - 45% Complete**
   - **What's Done:** ✅
     - Multi-currency database schema (NGN, ADA, USDM)
     - Prisma migration applied successfully
     - Exchange rate service with Binance API
     - Currency enum and type definitions
+    - Investment escrow smart contract (Aiken)
+    - Investment escrow service (TypeScript)
+    - Cardano payment service for distributions
+    - Deployment scripts for Preprod/Mainnet
   - **What's Needed:**
-    - Smart contract escrow for ADA/USDM (Aiken validator)
+    - Compile and deploy escrow contract to Preprod
     - Update investment approval flow (multi-currency)
     - Update profit distribution logic (currency conversion)
-    - Cardano payment service
     - Frontend currency selection UI
-    - Testing and QA
-  - **Estimated Time:** 4-5 weeks remaining
+    - Integration testing
+  - **Estimated Time:** 3 weeks remaining
   - **Business Impact:** 🌍 Opens international market, increases funding pool
   
 - [ ] **Mainnet Preparation**

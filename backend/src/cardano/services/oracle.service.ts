@@ -377,7 +377,7 @@ export class CardanoOracleService {
       // Build and submit transaction
       const tx = await this.lucid
         .newTx()
-        .payToContract(this.scriptAddress, { inline: datum }, { lovelace: 2000000n }) // 2 ADA
+        .payToContract(this.scriptAddress, { inline: datum }, { lovelace: BigInt(2000000) }) // 2 ADA
         .complete();
 
       const signedTx = await tx.sign().complete();

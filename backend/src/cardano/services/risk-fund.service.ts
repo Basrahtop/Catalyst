@@ -79,16 +79,16 @@ export class RiskFundService {
 
     const utxos = await this.lucid!.utxosAt(this.multiSigConfig!.multiSigAddress);
     
-    let adaBalance = 0n;
-    let usdmBalance = 0n;
+    let adaBalance = BigInt(0);
+    let usdmBalance = BigInt(0);
 
     for (const utxo of utxos) {
-      adaBalance += utxo.assets.lovelace || 0n;
+      adaBalance += utxo.assets.lovelace || BigInt(0);
       
       // Check for $USDM tokens
       if (this.USDM_POLICY_ID) {
         const usdmUnit = `${this.USDM_POLICY_ID}${Buffer.from(this.USDM_ASSET_NAME).toString('hex')}`;
-        usdmBalance += utxo.assets[usdmUnit] || 0n;
+        usdmBalance += utxo.assets[usdmUnit] || BigInt(0);
       }
     }
 

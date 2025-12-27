@@ -8,7 +8,15 @@
     "dev": "nodemon --exec tsx src/index.ts",
     "oracle:start": "tsx src/cardano/services/oracle.runner.ts",
     "cardano:setup-multisig": "node src/cardano/scripts/create-multisig.mjs",
-    "cardano:build-contracts": "cd ../aiken-contracts && aiken build && cd ../backend && node -e \"const fs=require('fs'); const src='../aiken-contracts/plutus.json'; const dest='src/cardano/plutus/reputation_registry.json'; fs.mkdirSync('src/cardano/plutus', {recursive:true}); fs.copyFileSync(src, dest); console.log('✅ Contracts compiled and copied');\""
+    "cardano:build-contracts": "cd ../aiken-contracts && aiken build && cd ../backend && node -e \"const fs=require('fs'); const src='../aiken-contracts/plutus.json'; const dest='src/cardano/plutus/reputation_registry.json'; fs.mkdirSync('src/cardano/plutus', {recursive:true}); fs.copyFileSync(src, dest); console.log('✅ Contracts compiled and copied');\"",
+    "deploy:escrow:preprod": "tsx src/cardano/scripts/deploy-escrow.ts --network=Preprod",
+    "deploy:escrow:mainnet": "tsx src/cardano/scripts/deploy-escrow.ts --network=Mainnet",
+    "cardano:balance": "tsx -e \"import('./src/cardano/services/cardano-payment.service.js').then(m => m.cardanoPaymentService.getWalletBalance().then(b => console.log('ADA:', b.ada.toString(), 'lovelace\\nUSDM:', b.usdm.toString(), 'microUSDM\\nAddress:', b.address)))\"",
+    "test:exchange-rate": "tsx src/tests/test-exchange-rate.ts",
+    "test:exchange-rate:multi": "tsx src/tests/test-exchange-rate-multi-source.ts",
+    "test:phase1": "tsx src/tests/test-phase1-integration.ts",
+    "test:wallet-balance": "tsx src/tests/test-wallet-balance.ts",
+    "test:db-schema": "npx prisma validate && echo '✅ Schema is valid'"
   },
   "keywords": [],
   "author": "",
