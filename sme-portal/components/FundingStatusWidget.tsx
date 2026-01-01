@@ -6,7 +6,7 @@ import { Hourglass, CheckCircle, Loader2, AlertCircle, CreditCard } from 'lucide
 
 interface FundingRequest {
   id: string;
-  status: 'PENDING' | 'APPROVED' | 'DECLINED' | 'COMPLETED';
+  status: 'PENDING' | 'PARTIALLY_FUNDED' | 'APPROVED' | 'ONGOING' | 'DECLINED' | 'COMPLETED';
 }
 
 export default function FundingStatusWidget() {
@@ -28,8 +28,10 @@ export default function FundingStatusWidget() {
           const requests = response.data;
 
           if (isActive) {
-            const pending = requests.filter(r => r.status === 'PENDING').length;
-            const active = requests.filter(r => r.status === 'APPROVED').length;
+            // Pending: Awaiting funding
+            const pending = requests.filter(r => r.status === 'PENDING' || r.status === 'PARTIALLY_FUNDED').length;
+            // Active: Fully funded (APPROVED) or has started profit sharing (ONGOING)
+            const active = requests.filter(r => r.status === 'APPROVED' || r.status === 'ONGOING').length;
             setPendingCount(pending);
             setActiveCount(active);
           }
@@ -75,7 +77,9 @@ export default function FundingStatusWidget() {
 {/* This block is now static. It will show 0, then update to the real number. */}
 <div className="h-8 mt-2 flex items-center justify-center">
   {error ? (
-    <AlertCircle className="w-6 h-6 text-red-500" title={error} />
+    <div className="flex items-center" title={error}>
+      <AlertCircle className="w-6 h-6 text-red-500" />
+    </div>
   ) : (
     <p className="text-2xl font-bold text-gray-900">{pendingCount}</p>
   )}
