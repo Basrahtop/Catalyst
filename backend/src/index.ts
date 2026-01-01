@@ -22,7 +22,7 @@ import reputationOnChainRoutes from './routes/reputation-onchain.routes';
 import exchangeRateRoutes from './routes/exchange-rate.routes';
 
 const app = express();
-const PORT = 8000;
+const PORT = process.env.PORT || 8000;
 const prisma = new PrismaClient();
 
 // Add BigInt serialization support for JSON responses
