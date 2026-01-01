@@ -1,0 +1,2 @@
+NIXPACKS_INSTALL_CMD=npm install
+NIXPACKS_BUILD_CMD=npm run build && npx prisma generate

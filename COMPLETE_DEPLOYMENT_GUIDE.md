@@ -11,28 +11,43 @@ We'll deploy 5 services:
 
 ---
 
-## Step 1: Deploy Backend to Railway
+## Step 1: Deploy Backend to Render.com
 
-### A. Create Railway Account
-1. Go to [railway.app](https://railway.app)
+### A. Create Render Account
+1. Go to [render.com](https://render.com)
 2. Sign up with GitHub
 3. Verify email
 
-### B. Deploy Backend
+### B. Create PostgreSQL Database First
 
-**Option 1: Via Railway Dashboard (Easiest)**
+1. Click **"New +"** → **"PostgreSQL"**
+2. Configure:
+   - **Name**: catalyst-db
+   - **Database**: catalyst_production
+   - **User**: catalyst
+   - **Region**: Choose closest to you
+   - **Plan**: Free (or paid for production)
+3. Click **"Create Database"**
+4. **Copy the Internal Database URL** (starts with `postgresql://`)
+   - Save this, you'll need it next!
 
-1. Click **"New Project"**
-2. Select **"Deploy from GitHub repo"**
-3. Choose **"Catalyst"** repository
-4. Configure:
-   - **Service Name**: catalyst-backend
-   - **Root Directory**: `/backend`
-   - **Start Command**: `npm start`
+### C. Deploy Backend Service
+
+1. Click **"New +"** → **"Web Service"**
+2. Select **"Connect a repository"** → Choose **"Catalyst"**
+3. Configure:
+   - **Name**: `catalyst-backend`
+   - **Region**: Same as database
+   - **Branch**: `main`
+   - **Root Directory**: `backend` ← **IMPORTANT!**
+   - **Runtime**: Node
    - **Build Command**: `npm install && npm run build && npx prisma generate && npx prisma migrate deploy`
+   - **Start Command**: `npm start`
+   - **Plan**: Free (or paid)
 
-5. Click **"Add Variables"** and add:
+4. Click **"Environment Variables"** → **"Add from .env"** and paste:
 ```
+DATABASE_URL=your-internal-database-url-from-step-b
 JWT_SECRET=your-super-secret-jwt-key-minimum-32-characters-long
 BLOCKFROST_PROJECT_ID=preprodXXXXXXXXXXXXXXXX
 BLOCKFROST_NETWORK=preprod
@@ -45,19 +60,16 @@ CLOUDINARY_API_KEY=your-cloudinary-key
 CLOUDINARY_API_SECRET=your-cloudinary-secret
 ```
 
-6. Click **"Add Database"** → **"PostgreSQL"**
-   - Railway auto-creates `DATABASE_URL` variable
+5. Click **"Create Web Service"**
 
-7. Click **"Deploy"**
+**Wait 3-5 minutes for deployment...**
 
-**Wait 2-3 minutes for deployment...**
-
-8. Once deployed, copy your backend URL:
+6. Once deployed, copy your backend URL:
 ```
-https://catalyst-backend-production.up.railway.app
+https://catalyst-backend.onrender.com
 ```
 
-**✅ Backend Deployed!**
+**✅ Backend Deployed on Render.com!**
 
 ---
 
