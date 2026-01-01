@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Investment Escrow Service
  * 

@@ -15,6 +15,8 @@
     "src/**/*"                 /* Only compile files in the "src" folder */
   ],
   "exclude": [
-    "node_modules"
+    "node_modules",
+    "src/tests/**/*",          /* Exclude test files from production build */
+    "src/cardano/scripts/**/*" /* Exclude deployment scripts with import.meta */
   ]
 }

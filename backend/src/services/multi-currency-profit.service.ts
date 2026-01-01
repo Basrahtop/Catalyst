@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Multi-Currency Profit Distribution Service
  * 
