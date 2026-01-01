@@ -9,7 +9,7 @@
 import { Request, Response } from 'express';
 import { PrismaClient, Currency, FundingStatus } from '@prisma/client';
 import { exchangeRateService } from '../services/exchange-rate.service';
-import { createPaymentSchedule } from '../utils/payment-schedule.js';
+import { createPaymentSchedule } from '../utils/payment-schedule';
 
 const prisma = new PrismaClient();
 
