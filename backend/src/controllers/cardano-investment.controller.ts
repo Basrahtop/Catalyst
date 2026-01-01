@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Cardano Investment Controller
  * 

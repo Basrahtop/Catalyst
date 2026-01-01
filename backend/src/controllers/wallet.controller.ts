@@ -19,13 +19,27 @@ export const getMyBalance = async (req: Request, res: Response) => {
   }
 
   try {
-    const wallet = await prisma.wallet.findUnique({
-      where: { userId: userId },
+    // Import wallet balance service dynamically to avoid circular deps
+    const { walletBalanceService } = await import('../services/wallet-balance.service');
+    
+    // Get multi-currency balance
+    const balance = await walletBalanceService.getUserBalance(userId);
+    
+    console.log(`[WalletController] Balance for user ${userId}:`, {
+      NGN: balance.NGN.toString(),
+      ADA: balance.ADA.toString(),
+      USDM: balance.USDM.toString()
     });
-    if (!wallet) {
-      return res.status(404).json({ error: 'Wallet not found.' });
-    }
-    res.status(200).json({ balance: wallet.balance });
+    
+    const response = {
+      ngn: Number(balance.NGN),
+      ada: Number(balance.ADA),
+      usdm: Number(balance.USDM)
+    };
+    
+    console.log(`[WalletController] Sending response:`, response);
+    
+    res.status(200).json(response);
   } catch (error) {
     console.error('Error fetching balance:', error);
     res.status(500).json({ error: 'Something went wrong.' });
@@ -96,12 +110,12 @@ export const depositFunds = async (req: Request, res: Response) => {
 
   try {
     const result = await prisma.$transaction(async (tx) => {
-      // 1. Update the user's wallet
+      // 1. Update the user's wallet (use balanceNGN, not deprecated balance)
       const updatedWallet = await tx.wallet.update({
         where: { userId: userId },
         data: {
-          balance: {
-            increment: amount,
+          balanceNGN: {
+            increment: BigInt(amount),
           },
         },
       });
@@ -126,9 +140,11 @@ export const depositFunds = async (req: Request, res: Response) => {
       return updatedWallet;
     });
 
+    console.log(`[Deposit] User ${userId} deposited ${amount} kobo. New balance: ${result.balanceNGN.toString()}`);
+
     res.status(200).json({
       message: 'Deposit successful',
-      newBalance: result.balance,
+      newBalance: Number(result.balanceNGN), // Convert BigInt to Number for JSON
     });
 
   } catch (error) {
@@ -156,7 +172,7 @@ export const transferFunds = async (req: Request, res: Response) => {
         where: { userId: senderId },
       });
       if (!senderWallet) { throw new Error('Your wallet was not found.'); }
-      if (senderWallet.balance < amount) { throw new Error('Insufficient funds.'); }
+      if (senderWallet.balanceNGN < BigInt(amount)) { throw new Error('Insufficient funds.'); }
       
       // 2. Find Recipient
       const recipientUser = await tx.user.findUnique({
@@ -173,12 +189,12 @@ export const transferFunds = async (req: Request, res: Response) => {
       // 3. Perform Transfer
       await tx.wallet.update({
         where: { userId: senderId },
-        data: { balance: { decrement: amount } },
+        data: { balanceNGN: { decrement: BigInt(amount) } },
       });
       
       await tx.wallet.update({
         where: { userId: recipientUser.id },
-        data: { balance: { increment: amount } },
+        data: { balanceNGN: { increment: BigInt(amount) } },
       });
 
       // 4. Create "Ledger" Record
@@ -232,7 +248,7 @@ export const withdrawFunds = async (req: Request, res: Response) => {
       if (!userWallet) {
         throw new Error('Wallet not found.');
       }
-      if (userWallet.balance < amount) {
+      if (userWallet.balanceNGN < BigInt(amount)) {
         throw new Error('Insufficient funds.');
       }
 
@@ -240,8 +256,8 @@ export const withdrawFunds = async (req: Request, res: Response) => {
       const updatedWallet = await tx.wallet.update({
         where: { userId: userId },
         data: {
-          balance: {
-            decrement: amount,
+          balanceNGN: {
+            decrement: BigInt(amount),
           },
         },
       });
@@ -268,7 +284,7 @@ export const withdrawFunds = async (req: Request, res: Response) => {
 
     res.status(200).json({
       message: 'Withdrawal successful. Funds will be transferred to your bank account.',
-      newBalance: result.balance,
+      newBalance: Number(result.balanceNGN),
     });
 
   } catch (error: any) {

@@ -44,14 +44,24 @@ export const getMe = async (req: Request, res: Response) => {
         },
         wallet: {
           select: {
-            balance: true,
+            balanceNGN: true,
           }
         }
       },
     });
 
     if (!user) return res.status(404).json({ error: 'User not found.' });
-    res.status(200).json(user);
+    
+    // Convert balanceNGN (BigInt) to balance (number) for frontend compatibility
+    const userResponse = user?.wallet ? {
+      ...user,
+      wallet: {
+        ...user.wallet,
+        balance: Number(user.wallet.balanceNGN), // Convert BigInt to number with 'balance' key
+      }
+    } : user;
+    
+    res.status(200).json(userResponse);
   } catch (error) {
     console.error("Error fetching user profile:", error);
     res.status(500).json({ error: 'Something went wrong.' });

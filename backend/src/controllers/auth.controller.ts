@@ -37,7 +37,7 @@ export const register = async (req: Request, res: Response) => {
         
         wallet: {
           create: {
-            balance: 0,
+            balanceNGN: 0,
           },
         },
         
@@ -51,8 +51,17 @@ export const register = async (req: Request, res: Response) => {
     sendVerificationEmail(user.email, emailVerificationToken)
       .catch(err => console.error("Error sending verification email:", err));
 
+    // Convert balanceNGN to balance for frontend compatibility
+    const userResponse = user?.wallet ? {
+      ...user,
+      wallet: {
+        ...user.wallet,
+        balance: Number(user.wallet.balanceNGN),
+      }
+    } : user;
+
     // We already selected the safe user, so no need to destructure password
-    res.status(201).json({ user: user });
+    res.status(201).json({ user: userResponse });
 
   } catch (error: any) {
     if (error.code === 'P2002' && error.meta?.target?.includes('email')) {
@@ -100,8 +109,17 @@ export const login = async (req: Request, res: Response) => {
       { expiresIn: '7d' }
     );
     
-    // 6. Send the token and the *safe* user object
-    res.status(200).json({ token, user: safeUser });
+    // 6. Convert balanceNGN (BigInt) to balance (number) for frontend compatibility
+    const userResponse = safeUser?.wallet ? {
+      ...safeUser,
+      wallet: {
+        ...safeUser.wallet,
+        balance: Number(safeUser.wallet.balanceNGN), // Convert BigInt to number with 'balance' key
+      }
+    } : safeUser;
+    
+    // 7. Send the token and the *safe* user object
+    res.status(200).json({ token, user: userResponse });
     // --- END OF FIX ---
 
   } catch (error: any) {
@@ -282,7 +300,7 @@ export const registerInvestor = async (req: Request, res: Response) => {
         // Create wallet for the investor
         wallet: {
           create: {
-            balance: 0,
+            balanceNGN: 0,
           },
         },
         
@@ -298,9 +316,18 @@ export const registerInvestor = async (req: Request, res: Response) => {
     sendVerificationEmail(user.email, emailVerificationToken)
       .catch(err => console.error("Error sending verification email:", err));
 
+    // Convert balanceNGN to balance for frontend compatibility
+    const userResponse = user?.wallet ? {
+      ...user,
+      wallet: {
+        ...user.wallet,
+        balance: Number(user.wallet.balanceNGN),
+      }
+    } : user;
+
     res.status(201).json({ 
       message: 'Investor registration successful. Please check your email to verify your account.',
-      user: user 
+      user: userResponse 
     });
 
   } catch (error: any) {
@@ -350,11 +377,20 @@ export const loginInvestor = async (req: Request, res: Response) => {
         wallet: {
           select: {
             id: true,
-            balance: true,
+            balanceNGN: true, // Use new field, not deprecated 'balance'
           }
         }
       }
     });
+
+    // Convert BigInt to Number for JSON serialization
+    const userResponse = safeUser ? {
+      ...safeUser,
+      wallet: safeUser.wallet ? {
+        id: safeUser.wallet.id,
+        balance: Number(safeUser.wallet.balanceNGN) // Keep 'balance' key for frontend compatibility
+      } : undefined
+    } : null;
 
     // 6. Create token
     const token = jwt.sign(
@@ -364,7 +400,7 @@ export const loginInvestor = async (req: Request, res: Response) => {
     );
     
     // 7. Return token and user with wallet
-    res.status(200).json({ token, user: safeUser });
+    res.status(200).json({ token, user: userResponse });
 
   } catch (error: any) {
     console.error("Investor login error:", error);

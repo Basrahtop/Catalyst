@@ -6,7 +6,7 @@
  * - ADA/USDM: Lock funds in smart contract escrow
  */
 
-import { PrismaClient, Currency } from '@prisma/client';
+import { PrismaClient, Currency, FundingStatus } from '@prisma/client';
 import { walletBalanceService } from './wallet-balance.service';
 import { exchangeRateService } from './exchange-rate.service';
 
@@ -50,12 +50,29 @@ class MultiCurrencyInvestmentService {
       throw new Error('Funding request not found');
     }
 
-    // 4. Validate funding request accepts this currency
+    // 4. CRITICAL: Check if funding request is already fully funded
+    if (fundingRequest.amountFunded >= fundingRequest.amount) {
+      throw new Error('This funding request is already fully funded and cannot accept more investments');
+    }
+
+    // 5. Check if investment would exceed remaining amount
+    const remainingAmount = fundingRequest.amount - fundingRequest.amountFunded;
+    if (amountInNGN > remainingAmount) {
+      throw new Error(`Investment amount (₦${(amountInNGN / 100).toLocaleString()}) exceeds remaining amount needed (₦${(remainingAmount / 100).toLocaleString()})`);
+    }
+
+    // 5.5. Validate minimum investment amount (₦1 = 100 kobo)
+    const MINIMUM_INVESTMENT_NGN = 100;
+    if (currency === Currency.NGN && amountInNGN < MINIMUM_INVESTMENT_NGN) {
+      throw new Error(`Minimum investment is ₦1.00. Remaining amount (₦${(remainingAmount / 100).toFixed(2)}) is too small.`);
+    }
+
+    // 6. Validate funding request accepts this currency
     if (!fundingRequest.acceptedCurrencies.includes(currency)) {
       throw new Error(`This funding request does not accept ${currency}`);
     }
 
-    // 5. Check investor has sufficient balance
+    // 7. Check investor has sufficient balance
     const hasSufficient = await walletBalanceService.hasSufficientBalance(
       investorId,
       amount,
@@ -66,12 +83,12 @@ class MultiCurrencyInvestmentService {
       throw new Error(`Insufficient ${currency} balance`);
     }
 
-    // 6. Process investment based on currency type
+    // 8. Process investment based on currency type
     if (currency === Currency.NGN) {
       return await this.processNGNInvestment(params, amountInNGN, exchangeRate);
     } else {
-      // ADA or USDM - use escrow
-      return await this.processCardanoInvestment(params, amountInNGN, exchangeRate, fundingRequest);
+      // For ADA/USDM, return error - client should use two-step flow
+      throw new Error(`For ${currency} investments, please use the /api/cardano-investment/prepare endpoint for client-side wallet signing.`);
     }
   }
 
@@ -126,13 +143,18 @@ class MultiCurrencyInvestmentService {
         },
       });
 
-      // Update funding request amount
+      // Update funding request amount and status if fully funded
+      const newAmountFunded = fundingRequest.amountFunded + amountInNGN;
+      const isFullyFunded = newAmountFunded >= fundingRequest.amount;
+
       await tx.fundingRequest.update({
         where: { id: fundingRequestId },
         data: {
           amountFunded: {
             increment: amountInNGN,
           },
+          // Auto-update status to APPROVED when fully funded
+          status: isFullyFunded ? FundingStatus.APPROVED : fundingRequest.status,
         },
       });
 
@@ -163,14 +185,18 @@ class MultiCurrencyInvestmentService {
       throw new Error('Please connect your Cardano wallet first');
     }
 
-    // 2. Get SME's Cardano wallet address
+    // 2. Get SME's Cardano wallet address from database
+    // Note: SME doesn't need active wallet connection to RECEIVE funds
+    // They only need connection when SPENDING funds
     const smeCardanoWallet = await prisma.cardanoWallet.findUnique({
       where: { userId: fundingRequest.sme.userId },
     });
 
-    if (!smeCardanoWallet) {
-      throw new Error('SME has not connected their Cardano wallet yet');
+    if (!smeCardanoWallet || !smeCardanoWallet.address) {
+      throw new Error('SME needs to register their Cardano wallet address first. Please contact SME to complete wallet setup.');
     }
+
+    console.log(`[CardanoInvestment] Using SME's registered wallet: ${smeCardanoWallet.address.slice(0, 20)}...`);
 
     // 3. Lock funds in smart contract escrow
     const { investmentEscrowService } = await import('../cardano/services/investment-escrow.service');

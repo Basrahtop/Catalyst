@@ -121,7 +121,7 @@ export const payInstallment = async (req: Request, res: Response) => {
       if (installment.totalDueFromSME === null) throw new Error('Report profit first.');
 
       const smeWallet = await tx.wallet.findUnique({ where: { userId } });
-      if (!smeWallet || smeWallet.balance < installment.totalDueFromSME) throw new Error('Insufficient funds.');
+      if (!smeWallet || smeWallet.balanceNGN < BigInt(installment.totalDueFromSME)) throw new Error('Insufficient funds.');
 
       // Check if we have investor shares (multi-investor) or legacy single investor
       const hasInvestorShares = installment.investorShares && installment.investorShares.length > 0;
@@ -140,11 +140,11 @@ export const payInstallment = async (req: Request, res: Response) => {
         if (!lenderWallet) throw new Error('Lender wallet not found.');
 
         // Pay single lender
-        await tx.wallet.update({ where: { id: smeWallet.id }, data: { balance: { decrement: installment.totalDueFromSME } } });
-        await tx.wallet.update({ where: { id: lenderWallet.id }, data: { balance: { increment: installment.totalDueToLender! } } });
+        await tx.wallet.update({ where: { id: smeWallet.id }, data: { balanceNGN: { decrement: BigInt(installment.totalDueFromSME) } } });
+        await tx.wallet.update({ where: { id: lenderWallet.id }, data: { balanceNGN: { increment: BigInt(installment.totalDueToLender!) } } });
         
         if (installment.type === InstallmentType.FINAL_PAYMENT) {
-          await tx.wallet.update({ where: { id: lenderWallet.id }, data: { balance: { increment: installment.request.amount } } });
+          await tx.wallet.update({ where: { id: lenderWallet.id }, data: { balanceNGN: { increment: BigInt(installment.request.amount) } } });
         }
       } else {
         // Multi-investor profit distribution
@@ -152,7 +152,7 @@ export const payInstallment = async (req: Request, res: Response) => {
         const principalToReturn = installment.type === InstallmentType.FINAL_PAYMENT ? installment.request.amount : 0;
 
         // Deduct total from SME
-        await tx.wallet.update({ where: { id: smeWallet.id }, data: { balance: { decrement: installment.totalDueFromSME } } });
+        await tx.wallet.update({ where: { id: smeWallet.id }, data: { balanceNGN: { decrement: BigInt(installment.totalDueFromSME) } } });
 
         // Distribute to each investor proportionally
         for (const share of installment.investorShares) {
@@ -169,7 +169,7 @@ export const payInstallment = async (req: Request, res: Response) => {
           // Credit investor wallet
           await tx.wallet.update({
             where: { id: share.investor.wallet.id },
-            data: { balance: { increment: totalToInvestor } }
+            data: { balanceNGN: { increment: BigInt(totalToInvestor) } }
           });
 
           // Update InstallmentShare with payment details
@@ -201,15 +201,15 @@ export const payInstallment = async (req: Request, res: Response) => {
       if (installment.request.agent && installment.totalDueToAgent && installment.totalDueToAgent > 0) { 
         agentWallet = await tx.wallet.findUnique({ where: { userId: installment.request.agent.user.id } });
         if (!agentWallet) throw new Error('Agent wallet not found.');
-        await tx.wallet.update({ where: { id: agentWallet.id }, data: { balance: { increment: installment.totalDueToAgent } } });
+        await tx.wallet.update({ where: { id: agentWallet.id }, data: { balanceNGN: { increment: BigInt(installment.totalDueToAgent) } } });
       }
 
       // Handle platform revenue
       const revenueWallet = await tx.wallet.findFirstOrThrow({ where: { user: { email: PLATFORM_REVENUE_EMAIL } } });
       const riskWallet = await tx.wallet.findFirstOrThrow({ where: { user: { email: PLATFORM_RISK_EMAIL } } });
       
-      await tx.wallet.update({ where: { id: revenueWallet.id }, data: { balance: { increment: installment.platformFinalProfit! } } });
-      await tx.wallet.update({ where: { id: riskWallet.id }, data: { balance: { increment: installment.riskWalletContribution! } } });
+      await tx.wallet.update({ where: { id: revenueWallet.id }, data: { balanceNGN: { increment: BigInt(installment.platformFinalProfit!) } } });
+      await tx.wallet.update({ where: { id: riskWallet.id }, data: { balanceNGN: { increment: BigInt(installment.riskWalletContribution!) } } });
       
       await tx.paymentInstallment.update({
         where: { id: installmentId },
@@ -223,7 +223,7 @@ export const payInstallment = async (req: Request, res: Response) => {
         await tx.fundingRequest.update({ where: { id: installment.requestId }, data: { status: FundingStatus.COMPLETED } });
       }
 
-      return { newBalance: smeWallet.balance - installment.totalDueFromSME };
+      return { newBalance: Number(smeWallet.balanceNGN) - installment.totalDueFromSME };
     });
 
     await recalculateFinancialScore(userId);

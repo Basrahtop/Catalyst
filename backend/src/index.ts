@@ -16,6 +16,7 @@ import adminRoutes from './routes/admin.routes';
 import profitRoutes from './routes/profit.routes'; // <-- 1. THIS WAS THE MISSING IMPORT
 import uploadRoutes from './routes/upload.routes';
 import cardanoRoutes from './routes/cardano.routes';
+import cardanoInvestmentRoutes from './routes/cardano-investment.routes';
 import reputationRoutes from './routes/reputation.routes';
 import reputationOnChainRoutes from './routes/reputation-onchain.routes';
 import exchangeRateRoutes from './routes/exchange-rate.routes';
@@ -23,6 +24,12 @@ import exchangeRateRoutes from './routes/exchange-rate.routes';
 const app = express();
 const PORT = 8000;
 const prisma = new PrismaClient();
+
+// Add BigInt serialization support for JSON responses
+// @ts-ignore
+BigInt.prototype.toJSON = function() {
+  return this.toString();
+};
 
 // --- Main Server Function ---
 async function main() {
@@ -45,6 +52,7 @@ async function main() {
   app.use('/api/profit-reports', profitRoutes); // Handles /my-reports, / (submit)
   app.use('/api/payments', profitRoutes);
   app.use('/api/cardano', cardanoRoutes);
+  app.use('/api/cardano-investment', cardanoInvestmentRoutes); // Two-step Cardano investment flow
   app.use('/api/reputation', reputationRoutes);
   app.use('/api/reputation', reputationOnChainRoutes); // On-chain endpoints
   app.use('/api/exchange-rates', exchangeRateRoutes); // Multi-currency exchange rates

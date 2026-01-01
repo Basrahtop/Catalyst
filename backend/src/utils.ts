@@ -26,7 +26,7 @@ export const userProfileSelect: Prisma.UserSelect = {
   wallet: {
     select: {
       id: true,
-      balance: true,
+      balanceNGN: true,
       userId: true,
     },
   },
