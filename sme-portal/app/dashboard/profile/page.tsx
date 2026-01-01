@@ -12,7 +12,8 @@ import {
   UploadCloud, 
   Save,
   Lock,
-  Camera
+  Camera,
+  AlertCircle
 } from 'lucide-react';
 
 interface UserProfile {
