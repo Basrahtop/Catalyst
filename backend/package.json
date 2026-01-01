@@ -4,8 +4,10 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "build": "tsc",
     "start": "node dist/index.js",
     "dev": "nodemon --exec tsx src/index.ts",
+    "postinstall": "prisma generate",
     "oracle:start": "tsx src/cardano/services/oracle.runner.ts",
     "cardano:setup-multisig": "node src/cardano/scripts/create-multisig.mjs",
     "cardano:build-contracts": "cd ../aiken-contracts && aiken build && cd ../backend && node -e \"const fs=require('fs'); const src='../aiken-contracts/plutus.json'; const dest='src/cardano/plutus/reputation_registry.json'; fs.mkdirSync('src/cardano/plutus', {recursive:true}); fs.copyFileSync(src, dest); console.log('✅ Contracts compiled and copied');\"",
