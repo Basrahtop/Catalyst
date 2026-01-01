@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useWallet } from '../context/WalletContext';
+import api from '@/lib/api';
 
 export type Currency = 'NGN' | 'ADA' | 'USDM';
 
@@ -35,7 +36,7 @@ export default function CurrencySelector({
   showBalance = true,
   showExchangeRate = true,
 }: CurrencySelectorProps) {
-  const { walletAddress, isConnected } = useWallet();
+  const { address, isConnected } = useWallet();
   const [balance, setBalance] = useState<Balance>({ ngn: 0, ada: 0, usdm: 0 });
   const [exchangeRates, setExchangeRates] = useState<ExchangeRate>({ ADA: 0, USDM: 0 });
   const [loading, setLoading] = useState(false);
@@ -48,27 +49,34 @@ export default function CurrencySelector({
         setLoading(true);
         setError(null);
 
-        // Fetch balance
-        const balanceRes = await fetch('/api/wallet/balance', {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
-          },
-        });
+        // Always fetch NGN balance
+        const balanceRes = await api.get('/wallet/balance');
+        
+        console.log('[CurrencySelector] Balance response:', balanceRes.data);
+        
+        // Only use ADA/USDM if wallet is connected
+        if (isConnected) {
+          setBalance(balanceRes.data);
+        } else {
+          // Only set NGN balance if wallet not connected
+          setBalance({
+            ngn: balanceRes.data.ngn,
+            ada: 0,
+            usdm: 0
+          });
+        }
 
-        if (!balanceRes.ok) throw new Error('Failed to fetch balance');
-        const balanceData = await balanceRes.json();
-        setBalance(balanceData);
+        console.log('[CurrencySelector] Balance set to:', isConnected ? balanceRes.data : { ngn: balanceRes.data.ngn, ada: 0, usdm: 0 });
 
-        // Fetch exchange rates
-        const ratesRes = await fetch('/api/exchange-rates');
-        if (!ratesRes.ok) throw new Error('Failed to fetch exchange rates');
-        const ratesData = await ratesRes.json();
+        // Fetch exchange rates (convert from kobo to Naira by dividing by 100)
+        const ratesRes = await api.get('/exchange-rates');
         setExchangeRates({
-          ADA: ratesData.ADA,
-          USDM: ratesData.USDM,
+          ADA: ratesRes.data.ADA / 100,  // Convert kobo to Naira
+          USDM: ratesRes.data.USDM / 100, // Convert kobo to Naira
         });
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load data');
+      } catch (err: any) {
+        console.error('Error fetching balance/rates:', err);
+        setError(err.response?.data?.error || err.message || 'Failed to load data');
       } finally {
         setLoading(false);
       }
@@ -98,9 +106,11 @@ export default function CurrencySelector({
       case 'NGN':
         return '₦';
       case 'ADA':
-        return '₳';
+        return '$';
       case 'USDM':
         return '$';
+      default:
+        return '';
     }
   };
 
@@ -191,18 +201,37 @@ export default function CurrencySelector({
 
       {/* Balance Display */}
       {showBalance && !loading && (
-        <div className="bg-gray-50 rounded-lg p-3 space-y-2">
-          <div className="flex justify-between text-sm">
-            <span className="text-gray-600">Available Balance:</span>
-            <span className="font-medium text-gray-900">
-              {getCurrencySymbol(selectedCurrency)} {getBalance(selectedCurrency)} {selectedCurrency}
-            </span>
-          </div>
-
+        <div className="bg-blue-50 rounded-lg p-3 space-y-2 border border-blue-200">
+          {/* Show connect message for ADA/USDM when wallet not connected */}
+          {selectedCurrency !== 'NGN' && !isConnected ? (
+            <div className="text-center py-2">
+              <p className="text-sm text-orange-600 font-medium">
+                Connect your Cardano wallet to view {selectedCurrency} balance
+              </p>
+            </div>
+          ) : (
+            <>
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-700 font-medium">Available Balance:</span>
+                <span className="font-bold text-gray-900">
+                  {getCurrencySymbol(selectedCurrency)} {getBalance(selectedCurrency)} {selectedCurrency}
+                </span>
+              </div>
+              {/* Debug info - remove in production */}
+              {process.env.NODE_ENV === 'development' && (
+                <div className="text-xs text-gray-500 border-t pt-2">
+                  <div>Raw balance: {selectedCurrency === 'NGN' ? balance.ngn : selectedCurrency === 'ADA' ? balance.ada : balance.usdm}</div>
+                  <div>Amount entered: {amount}</div>
+                  <div>Exceeds: {exceedsBalance() ? 'YES' : 'NO'}</div>
+                  <div>showBalance: {showBalance ? 'true' : 'false'}, loading: {loading ? 'true' : 'false'}</div>
+                </div>
+              )}
+            </>
+          )}          
           {/* Show blockchain badge for ADA/USDM */}
           {requiresWallet && isConnected && (
-            <div className="flex items-center justify-between text-xs text-gray-500">
-              <span>Connected Wallet</span>
+            <div className="flex items-center justify-between text-xs text-gray-700">
+              <span className="font-medium">Connected Wallet</span>
               <span className="flex items-center space-x-1">
                 <svg
                   className="w-3 h-3 text-green-500"
@@ -216,7 +245,7 @@ export default function CurrencySelector({
                   />
                 </svg>
                 <span className="font-mono text-xs">
-                  {walletAddress?.slice(0, 8)}...{walletAddress?.slice(-6)}
+                  {address?.slice(0, 8)}...{address?.slice(-6)}
                 </span>
               </span>
             </div>
@@ -230,7 +259,7 @@ export default function CurrencySelector({
           <div className="flex justify-between text-sm">
             <span className="text-gray-600">Current Rate:</span>
             <span className="font-medium text-gray-900">
-              1 {selectedCurrency} = ₦{exchangeRates[selectedCurrency].toLocaleString()}
+              1 {selectedCurrency} = ₦{exchangeRates[selectedCurrency].toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </span>
           </div>
           {amount && parseFloat(amount) > 0 && (
