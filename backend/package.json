@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && node -e \"const fs = require('fs'); const path = require('path'); const file = path.join(__dirname, 'dist', 'utils', 'payment-schedule.js'); if (!fs.existsSync(file)) { console.error('❌ payment-schedule.js not found after build!'); process.exit(1); } else { console.log('✅ payment-schedule.js exists in dist/utils'); }\"",
     "start": "node dist/index.js",
     "dev": "nodemon --exec tsx src/index.ts",
     "postinstall": "prisma generate",
