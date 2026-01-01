@@ -1,0 +1,328 @@
+# API Reference
+
+## Base URL
+
+```
+https://api.catalyst.com/api
+```
+
+## Authentication
+
+All protected endpoints require a JWT token in the Authorization header:
+
+```http
+Authorization: Bearer <token>
+```
+
+### POST /auth/register
+
+Register a new user account.
+
+**Request Body:**
+```json
+{
+  "email": "user@example.com",
+  "password": "securePassword123",
+  "firstName": "John",
+  "lastName": "Doe",
+  "phone": "+234XXXXXXXXXX",
+  "role": "INVESTOR" // or "SME", "AGENT"
+}
+```
+
+**Response (201):**
+```json
+{
+  "message": "User registered successfully",
+  "user": {
+    "id": "cl9...",
+    "email": "user@example.com",
+    "firstName": "John",
+    "role": "INVESTOR"
+  }
+}
+```
+
+### POST /auth/login
+
+Authenticate and receive JWT token.
+
+**Request Body:**
+```json
+{
+  "email": "user@example.com",
+  "password": "securePassword123"
+}
+```
+
+**Response (200):**
+```json
+{
+  "message": "Login successful",
+  "token": "eyJhbGciOiJIUzI1NiIs...",
+  "user": {
+    "id": "cl9...",
+    "email": "user@example.com",
+    "role": "INVESTOR"
+  }
+}
+```
+
+## Funding Requests
+
+### GET /funding-requests
+
+List all funding requests with optional filtering.
+
+**Query Parameters:**
+- `status`: Filter by status (PENDING, APPROVED, etc.)
+- `currency`: Filter by accepted currency
+- `minAmount`: Minimum funding amount (kobo)
+- `maxAmount`: Maximum funding amount (kobo)
+
+**Response (200):**
+```json
+{
+  "fundingRequests": [
+    {
+      "id": "cl9...",
+      "sme": {
+        "businessName": "Fashion Hub",
+        "location": "Lagos"
+      },
+      "purpose": "Inventory expansion",
+      "amount": 50000000, // ₦500,000 in kobo
+      "amountFunded": 20000000,
+      "profitSharePercentage": 20,
+      "termInMonths": 3,
+      "status": "PARTIALLY_FUNDED",
+      "acceptedCurrencies": ["NGN", "ADA", "USDM"]
+    }
+  ]
+}
+```
+
+### POST /funding-requests
+
+Create a new funding request (SME only).
+
+**Request Body:**
+```json
+{
+  "purpose": "Equipment Purchase",
+  "description": "Need sewing machines...",
+  "amount": 50000000, // kobo
+  "termInMonths": 3,
+  "profitSharePercentage": 20,
+  "acceptedCurrencies": ["NGN", "ADA"]
+}
+```
+
+**Response (201):**
+```json
+{
+  "message": "Funding request created",
+  "fundingRequest": {
+    "id": "cl9...",
+    "status": "PENDING",
+    ...
+  }
+}
+```
+
+## Investments
+
+### POST /investments
+
+Invest in a funding request (NGN only).
+
+**Request Body:**
+```json
+{
+  "fundingRequestId": "cl9...",
+  "amount": 10000000, // ₦100,000 in kobo
+  "currency": "NGN"
+}
+```
+
+**Response (201):**
+```json
+{
+  "message": "Investment successful",
+  "investment": {
+    "id": "cl9...",
+    "amount": 10000000,
+    "currency": "NGN"
+  }
+}
+```
+
+### POST /cardano/prepare-investment
+
+Prepare Cardano investment transaction.
+
+**Request Body:**
+```json
+{
+  "fundingRequestId": "cl9...",
+  "amountADA": 1000000000, // 1000 ADA in lovelace
+  "walletAddress": "addr1..."
+}
+```
+
+**Response (200):**
+```json
+{
+  "txParams": {
+    "escrowAddress": "addr1...",
+    "amount": 1000000000,
+    "datum": "..."
+  },
+  "amountInNGN": 100000000
+}
+```
+
+### POST /cardano/confirm-investment
+
+Confirm Cardano investment after signing.
+
+**Request Body:**
+```json
+{
+  "fundingRequestId": "cl9...",
+  "txHash": "abc123...",
+  "amountADA": 1000000000
+}
+```
+
+**Response (200):**
+```json
+{
+  "message": "Investment confirmed",
+  "investment": {
+    "id": "cl9...",
+    "blockchainTxHash": "abc123..."
+  }
+}
+```
+
+## Profit Reporting
+
+### POST /payments/installments/:id/report
+
+Report profits for an installment (SME only).
+
+**Request Body:**
+```json
+{
+  "reportedProfit": 100000000 // ₦1,000,000 in kobo
+}
+```
+
+**Response (200):**
+```json
+{
+  "message": "Profit reported and distributed",
+  "distribution": {
+    "lenderGrossShare": 20000000,
+    "lenderNetShare": 18000000,
+    "smeNetShare": 60000000,
+    "agentCommission": 4000000,
+    "platformRevenue": 18000000
+  }
+}
+```
+
+## Wallets
+
+### GET /wallets/balance
+
+Get user's wallet balance.
+
+**Response (200):**
+```json
+{
+  "balance": {
+    "NGN": 10000000, // ₦100,000 in kobo
+    "ADA": 0,
+    "USDM": 0
+  }
+}
+```
+
+### POST /wallets/deposit
+
+Deposit NGN to wallet.
+
+**Request Body:**
+```json
+{
+  "amount": 10000000, // kobo
+  "paymentReference": "ref123"
+}
+```
+
+### POST /wallets/withdraw
+
+Withdraw NGN from wallet.
+
+**Request Body:**
+```json
+{
+  "amount": 10000000, // kobo
+  "bankAccount": "1234567890",
+  "bankCode": "058" // GTBank
+}
+```
+
+## Error Responses
+
+All endpoints may return:
+
+**400 Bad Request:**
+```json
+{
+  "error": "Validation failed",
+  "details": ["Amount must be positive"]
+}
+```
+
+**401 Unauthorized:**
+```json
+{
+  "error": "Authentication required"
+}
+```
+
+**403 Forbidden:**
+```json
+{
+  "error": "Insufficient permissions"
+}
+```
+
+**404 Not Found:**
+```json
+{
+  "error": "Resource not found"
+}
+```
+
+**500 Internal Server Error:**
+```json
+{
+  "error": "Internal server error",
+  "message": "An unexpected error occurred"
+}
+```
+
+## Rate Limiting
+
+- **100 requests per 15 minutes** per IP address
+- **Rate limit exceeded (429):**
+```json
+{
+  "error": "Rate limit exceeded",
+  "retryAfter": 900 // seconds
+}
+```

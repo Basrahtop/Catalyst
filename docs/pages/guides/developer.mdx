@@ -1,0 +1,526 @@
+# Developer Guide
+
+## Getting Started
+
+This guide will help you set up the Catalyst development environment and contribute to the project.
+
+## Prerequisites
+
+- **Node.js** 18.x or higher
+- **PostgreSQL** 14+
+- **Git**
+- **pnpm** or **npm**
+- **Cardano wallet** (Nami/Eternl/Flint) for blockchain testing
+
+## Project Structure
+
+```
+catalyst-project/
+├── backend/              # Node.js Express API
+│   ├── src/
+│   │   ├── controllers/ # Route handlers
+│   │   ├── services/    # Business logic
+│   │   ├── utils/       # Helper functions
+│   │   ├── middleware/  # Auth, validation
+│   │   └── index.ts     # Entry point
+│   ├── prisma/          # Database schema & migrations
+│   └── package.json
+├── investor-dashboard/  # Next.js investor app
+├── sme-portal/          # Next.js SME app
+├── marketplace/         # Next.js marketplace (Phase 2)
+├── aiken-contracts/     # Cardano smart contracts
+└── docs/               # This documentation site
+```
+
+## Backend Setup
+
+### 1. Clone and Install
+
+```bash
+git clone https://github.com/yourusername/catalyst-project.git
+cd catalyst-project/backend
+npm install
+```
+
+### 2. Environment Variables
+
+Create `.env` file:
+
+```env
+# Database
+DATABASE_URL="postgresql://user:password@localhost:5432/catalyst_db"
+
+# JWT
+JWT_SECRET="your-secret-key-minimum-32-characters"
+
+# Cardano
+BLOCKFROST_PROJECT_ID="your-blockfrost-project-id"
+BLOCKFROST_NETWORK="preprod"
+
+# External APIs
+COINGECKO_API_KEY="optional"
+EXCHANGE_RATE_API_KEY="your-key"
+CLOUDINARY_CLOUD_NAME="your-cloud-name"
+CLOUDINARY_API_KEY="your-key"
+CLOUDINARY_API_SECRET="your-secret"
+
+# Server
+PORT=5000
+NODE_ENV="development"
+```
+
+### 3. Database Setup
+
+```bash
+# Create database
+createdb catalyst_db
+
+# Run migrations
+npx prisma migrate dev
+
+# Seed database (optional)
+npx prisma db seed
+```
+
+### 4. Start Development Server
+
+```bash
+npm run dev
+```
+
+Backend runs at `http://localhost:5000`
+
+## Frontend Setup
+
+### Investor Dashboard
+
+```bash
+cd investor-dashboard
+npm install
+cp .env.example .env.local
+
+# Edit .env.local
+NEXT_PUBLIC_API_URL=http://localhost:5000/api
+NEXT_PUBLIC_BLOCKFROST_PROJECT_ID=your-project-id
+
+# Start dev server
+npm run dev
+```
+
+Runs at `http://localhost:3000`
+
+### SME Portal
+
+```bash
+cd sme-portal
+npm install
+cp .env.example .env.local
+
+# Edit .env.local (same as investor dashboard)
+
+npm run dev
+```
+
+Runs at `http://localhost:3001`
+
+## Database Schema
+
+Located in `backend/prisma/schema.prisma`:
+
+```prisma
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  firstName    String
+  lastName     String
+  role         Role
+  createdAt    DateTime @default(now())
+  
+  investor Investor?
+  sme      SME?
+  wallet   Wallet?
+}
+
+model FundingRequest {
+  id                   String   @id @default(cuid())
+  smeId                String
+  amount               BigInt
+  profitSharePercentage Float
+  status               FundingStatus
+  
+  sme         SME           @relation(fields: [smeId], references: [id])
+  investments Investment[]
+}
+
+// ... more models
+```
+
+### Adding New Models
+
+1. Edit `schema.prisma`
+2. Create migration:
+```bash
+npx prisma migrate dev --name add_new_model
+```
+3. Prisma Client regenerates automatically
+
+## API Development
+
+### Creating New Endpoints
+
+1. **Define Route** in `src/index.ts`:
+
+```typescript
+import { myController } from './controllers/my-controller';
+
+app.post('/api/my-endpoint', 
+  authenticateToken, 
+  myController
+);
+```
+
+2. **Create Controller** in `src/controllers/my-controller.ts`:
+
+```typescript
+import { Request, Response } from 'express';
+import prisma from '../prisma.config';
+
+export const myController = async (req: Request, res: Response) => {
+  try {
+    const { param1 } = req.body;
+    
+    // Business logic
+    const result = await prisma.myModel.create({
+      data: { param1 }
+    });
+    
+    res.status(201).json({
+      message: 'Success',
+      data: result
+    });
+  } catch (error) {
+    console.error('Error:', error);
+    res.status(500).json({
+      error: 'Internal server error'
+    });
+  }
+};
+```
+
+3. **Add Types** (TypeScript):
+
+```typescript
+interface MyRequest {
+  param1: string;
+  param2: number;
+}
+
+interface MyResponse {
+  id: string;
+  createdAt: Date;
+}
+```
+
+### Authentication Middleware
+
+Protected routes use `authenticateToken`:
+
+```typescript
+import { authenticateToken } from './middleware/auth';
+
+app.post('/api/protected', 
+  authenticateToken,  // Adds req.user
+  myProtectedController
+);
+```
+
+Access user in controller:
+
+```typescript
+export const myProtectedController = async (req: AuthRequest, res: Response) => {
+  const userId = req.user?.userId;
+  // Use userId for queries
+};
+```
+
+## Frontend Development
+
+### Making API Calls
+
+Create service file `lib/api/my-service.ts`:
+
+```typescript
+import axios from 'axios';
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
+
+export const myApiCall = async (data: MyData) => {
+  const token = localStorage.getItem('token');
+  
+  const response = await axios.post(
+    `${API_URL}/my-endpoint`,
+    data,
+    {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    }
+  );
+  
+  return response.data;
+};
+```
+
+### Using in Components
+
+```typescript
+'use client';
+
+import { useState } from 'react';
+import { myApiCall } from '@/lib/api/my-service';
+
+export default function MyComponent() {
+  const [loading, setLoading] = useState(false);
+  
+  const handleSubmit = async () => {
+    setLoading(true);
+    try {
+      const result = await myApiCall({ param1: 'value' });
+      console.log('Success:', result);
+    } catch (error) {
+      console.error('Error:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  return (
+    <button onClick={handleSubmit} disabled={loading}>
+      {loading ? 'Loading...' : 'Submit'}
+    </button>
+  );
+}
+```
+
+## Blockchain Development
+
+### Smart Contract Development
+
+Located in `aiken-contracts/validators/`:
+
+```aiken
+// investment_escrow.ak
+validator investment_escrow {
+  datum {
+    beneficiary: PublicKeyHash,
+    deadline: POSIXTime,
+    targetAmount: Int
+  }
+  
+  redeemer {
+    action: Action
+  }
+  
+  spend(datum, redeemer, ctx) {
+    // Validation logic
+  }
+}
+```
+
+### Building Contracts
+
+```bash
+cd aiken-contracts
+aiken build
+```
+
+Outputs to `build/packages/`
+
+### Testing Contracts
+
+```bash
+aiken check
+aiken test
+```
+
+### Deploying to Testnet
+
+1. Build contract
+2. Get contract address:
+```bash
+ts-node get-address.ts
+```
+3. Update backend with new address
+
+## Testing
+
+### Unit Tests (Backend)
+
+```bash
+cd backend
+npm test
+```
+
+### E2E Tests (Frontend)
+
+```bash
+cd investor-dashboard
+npm run test:e2e
+```
+
+### Manual Testing Checklist
+
+- [ ] User registration/login
+- [ ] Funding request creation
+- [ ] NGN investment flow
+- [ ] ADA investment flow (2-step)
+- [ ] Profit reporting
+- [ ] 4-Way Split calculations
+- [ ] Wallet deposits/withdrawals
+
+## Code Standards
+
+### TypeScript
+
+- Use strict mode
+- Define interfaces for all data structures
+- Avoid `any` type
+- Use async/await (no callbacks)
+
+### Naming Conventions
+
+- **Files**: kebab-case (`my-file.ts`)
+- **Components**: PascalCase (`MyComponent.tsx`)
+- **Functions**: camelCase (`myFunction()`)
+- **Constants**: UPPER_SNAKE_CASE (`MAX_AMOUNT`)
+
+### Git Workflow
+
+```bash
+# Create feature branch
+git checkout -b feature/my-feature
+
+# Make changes, commit
+git add .
+git commit -m "feat: add new feature"
+
+# Push and create PR
+git push origin feature/my-feature
+```
+
+### Commit Messages
+
+Follow conventional commits:
+- `feat:` New feature
+- `fix:` Bug fix
+- `docs:` Documentation
+- `refactor:` Code refactoring
+- `test:` Tests
+- `chore:` Maintenance
+
+## Debugging
+
+### Backend Debugging
+
+Add breakpoints in VS Code:
+
+`.vscode/launch.json`:
+```json
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Debug Backend",
+      "program": "${workspaceFolder}/backend/src/index.ts",
+      "preLaunchTask": "tsc: build - tsconfig.json",
+      "outFiles": ["${workspaceFolder}/backend/dist/**/*.js"]
+    }
+  ]
+}
+```
+
+### Database Debugging
+
+```bash
+# Open Prisma Studio
+npx prisma studio
+
+# View all tables in browser UI
+```
+
+### Blockchain Debugging
+
+Use Cardano testnet explorer:
+- **Preprod**: https://preprod.cardanoscan.io
+- Paste transaction hash to view details
+
+## Common Issues
+
+### "Port already in use"
+
+```bash
+# Find process
+lsof -i :5000
+
+# Kill process
+kill -9 <PID>
+```
+
+### Database connection errors
+
+```bash
+# Restart PostgreSQL
+sudo service postgresql restart
+
+# Check connection
+psql -U user -d catalyst_db
+```
+
+### Prisma Client out of sync
+
+```bash
+npx prisma generate
+```
+
+## Contributing
+
+1. Fork the repository
+2. Create feature branch
+3. Make changes with tests
+4. Submit PR with description
+5. Wait for review
+
+### PR Checklist
+
+- [ ] Code follows style guide
+- [ ] Tests pass
+- [ ] Documentation updated
+- [ ] No console.log statements
+- [ ] TypeScript types defined
+
+## Resources
+
+- **Prisma Docs**: https://www.prisma.io/docs
+- **Next.js Docs**: https://nextjs.org/docs
+- **Aiken Docs**: https://aiken-lang.org
+- **Cardano Docs**: https://developers.cardano.org
+
+## Getting Help
+
+- **GitHub Issues**: Report bugs or request features
+- **Developer Slack**: Join our Slack channel
+- **Email**: dev@catalyst.com
+- **Office Hours**: Tuesdays 3pm WAT (Zoom link in Slack)
+
+## Next Steps
+
+1. Set up local environment
+2. Run the full stack
+3. Make a small change
+4. Submit your first PR!
+
+Welcome to the Catalyst developer community! 🚀

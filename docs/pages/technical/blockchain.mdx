@@ -1,0 +1,143 @@
+# Blockchain Integration
+
+## Why Cardano?
+
+Catalyst chose Cardano as blockchain infrastructure for strategic reasons:
+
+### Formal Verification and Security
+
+Cardano's smart contracts use **Plutus**, a language designed with formal verification principles. For a platform handling real people's livelihoods, mathematical certainty that escrow contracts behave exactly as specified is not optional—it's foundational.
+
+Traditional audits can miss edge cases; **formal verification provides proof**.
+
+### Transaction Economics
+
+With transaction fees averaging **$0.20**, Cardano makes micro-investments economically viable. In a market where the average investment might be ₦50,000 ($60 USD), high blockchain fees would consume meaningful portions of returns. Cardano's fee structure preserves value for end users.
+
+### Sustainability and Longevity
+
+Building financial infrastructure requires thinking in **decades, not quarters**. Cardano's peer-reviewed development process, academic foundation, and energy-efficient proof-of-stake consensus signal long-term viability.
+
+### Real-World Commitment
+
+Cardano's partnerships in Ethiopia and focus on African markets demonstrate alignment with the mission of financial inclusion in developing economies.
+
+## Smart Contract Architecture
+
+### Investment Escrow Contract
+
+Written in **Aiken 1.0**, the escrow contract implements:
+
+```aiken
+// Core escrow logic
+validator investment_escrow {
+  // Parameters
+  beneficiary: PublicKeyHash
+  deadline: POSIXTime
+  
+  // Spending conditions
+  spend(datum, redeemer, ctx) {
+    // Release to beneficiary if funded
+    // Refund to investors if deadline passed
+    // Verify signatures
+  }
+}
+```
+
+**Key Features:**
+- Funds lock on-chain until conditions met
+- Multiple investors can contribute to same escrow
+- Automatic refund if funding target not reached by deadline
+- Beneficiary (SME) can claim after full funding
+- Time-locked for security
+
+### Two-Step Investment Flow
+
+**Step 1: Prepare Transaction**
+- Investor calls `/api/cardano/prepare-investment`
+- Backend generates transaction parameters
+- Returns UTxO references, amounts, and contract address
+
+**Step 2: Sign and Confirm**
+- Investor signs transaction using wallet (Nami, Eternl, Flint)
+- Broadcasts to Cardano blockchain
+- Submits tx hash to `/api/cardano/confirm-investment`
+- Backend verifies on-chain and records in database
+
+### Profit Distribution
+
+When SME reports profits, the system:
+1. Calculates each investor's share based on contribution %
+2. Generates release transaction from escrow
+3. SME signs to release proportional amounts
+4. Each investor receives their share directly to wallet
+
+## Blockfrost Integration
+
+**Blockfrost** provides Cardano blockchain access without running a full node:
+
+```typescript
+const blockfrost = new BlockFrostAPI({
+  projectId: process.env.BLOCKFROST_PROJECT_ID,
+  network: 'preprod' // or 'mainnet'
+});
+
+// Query transaction status
+const tx = await blockfrost.txs(txHash);
+
+// Get UTxOs at address
+const utxos = await blockfrost.addressesUtxos(address);
+```
+
+## Security Considerations
+
+### Self-Custody Model
+
+- **Users never expose private keys** to the platform
+- Wallet applications (Nami, Eternl, Flint) handle signing
+- Platform backend never has custody of crypto assets
+- All blockchain interactions are transparent and auditable
+
+### Contract Auditing
+
+Smart contracts undergo:
+1. **Formal verification** using Aiken's type system
+2. **Manual code review** by experienced Cardano developers
+3. **Testnet deployment** for real-world testing
+4. **Community audit** before mainnet deployment
+
+### Multi-Signature Safety
+
+For high-value operations, the system supports:
+- Multi-signature escrow requiring multiple approvals
+- Time-locks preventing immediate withdrawal
+- Admin override for dispute resolution (with governance)
+
+## Mainnet Readiness
+
+Current Status: **Preprod Testnet**
+
+Before mainnet deployment:
+- [x] Core escrow contract implemented
+- [x] Two-step investment flow functional
+- [x] Blockfrost integration complete
+- [ ] Security audit by external firm
+- [ ] Stress testing with 1000+ concurrent transactions
+- [ ] Insurance coverage for smart contract risk
+- [ ] Mainnet deployment with gradual rollout
+
+## Network Fees
+
+Average transaction costs on Cardano:
+- **Lock funds in escrow**: ~0.3 ADA ($0.20)
+- **Release from escrow**: ~0.3 ADA ($0.20)
+- **Total per investment cycle**: ~0.6 ADA ($0.40)
+
+Compare to Ethereum: $5-50+ per transaction depending on gas prices.
+
+## Future Enhancements
+
+- **NFT reputation tokens** for top-performing SMEs
+- **On-chain governance** for platform parameter changes
+- **Decentralized oracle integration** for automated profit verification
+- **Cross-chain bridges** to accept Bitcoin, Ethereum, Solana

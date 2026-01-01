@@ -1,0 +1,93 @@
+# Technical Architecture
+
+## System Overview
+
+Catalyst employs a **microservices architecture** organized into distinct application layers, each with specific responsibilities and clear interfaces. This separation enables independent scaling, isolated testing, and flexibility in technology choices while maintaining system coherence through well-defined APIs.
+
+## Architecture Layers
+
+### Application Layer
+
+Three **Next.js 14 web applications**, each optimized for its user audience:
+
+- **Investor Dashboard**: Portfolio tracking, opportunity discovery, and multi-currency wallet management
+- **SME Portal**: Mobile-responsive funding request creation and profit reporting
+- **Admin Platform**: Operational dashboards with data visualization and monitoring tools
+
+All applications communicate with the backend exclusively through RESTful HTTP requests, maintaining clean separation between presentation logic and business logic.
+
+### Backend API Layer
+
+**Node.js Express application** providing unified business logic for all platform operations:
+
+- Authentication via JWT tokens
+- Authorization through middleware
+- Database transactions via Prisma ORM
+- Blockchain coordination through Blockfrost API
+- External service integrations (exchange rates, file uploads)
+
+The API implements RESTful principles with resource-based routing, standard HTTP methods, JSON request/response formats, and meaningful status codes.
+
+### Database Layer
+
+**PostgreSQL** for persistent storage with **Prisma ORM** providing type-safe database access and automated migration management. The schema implements:
+
+- Relational data modeling with foreign key constraints
+- Indexes on frequently queried fields
+- Transaction support for multi-table updates
+- Financial amounts stored as BigInt in smallest currency units
+
+### Blockchain Layer
+
+Integration with **Cardano's preprod testnet** (mainnet planned) through Blockfrost API. Smart contracts written in **Aiken** implement investment escrow logic:
+
+- Funds lock on-chain until predefined conditions trigger release
+- Users interact through client-side wallet applications (Nami, Eternl, Flint)
+- Never exposing private keys to the platform
+- Maintaining self-custody while participating in the ecosystem
+
+### External Services
+
+- **CoinGecko**: Real-time ADA/NGN exchange rates
+- **ExchangeRate-API**: Fiat currency conversions (USDM/USD/NGN)
+- **Cloudinary**: File uploads with automatic optimization and secure CDN delivery
+
+## Technology Stack
+
+**Backend:**
+- Node.js 18 LTS
+- Express 4.18
+- Prisma 5.x (ORM)
+- PostgreSQL 14+
+- JWT & bcrypt
+- TypeScript 5.x
+
+**Frontend:**
+- Next.js 14
+- React 18
+- TypeScript 5.x
+- Tailwind CSS 3.x
+- Lucid Cardano
+- Axios
+
+**Blockchain:**
+- Cardano
+- Aiken 1.0
+- Plutus
+- Blockfrost
+- Lucid 0.10
+
+**Infrastructure:**
+- Vercel (frontend)
+- Railway/AWS (backend)
+- PostgreSQL managed instance
+- Cloudinary (CDN)
+- GitHub Actions (CI/CD)
+
+## Why This Stack?
+
+- **TypeScript** across all layers for compile-time error detection
+- **Next.js** provides SSR, code splitting, and optimized builds
+- **Prisma** generates type-safe database clients, reducing runtime errors
+- **Cardano** offers formal verification, low fees ($0.20), and sustainability
+- Fast feedback loops and high confidence in code correctness

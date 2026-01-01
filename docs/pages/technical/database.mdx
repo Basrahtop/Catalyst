@@ -1,0 +1,168 @@
+# Database Design
+
+## Core Entity Models
+
+The database schema implements a relational model optimized for **multi-currency investment tracking**, **profit distribution calculations**, and **audit trail maintenance**. All tables use CUID (Collision-resistant Unique Identifier) for primary keys.
+
+## User Model
+
+Represents all platform participants with role-based differentiation:
+
+```typescript
+{
+  id: String (CUID)
+  email: String (unique, indexed)
+  passwordHash: String
+  firstName: String
+  lastName: String
+  phone: String?
+  role: Enum (INVESTOR, SME, ADMIN, AGENT)
+  isVerified: Boolean
+  createdAt: DateTime
+  updatedAt: DateTime
+}
+```
+
+## Wallet Model
+
+Tracks multi-currency balances:
+
+```typescript
+{
+  id: String (CUID)
+  userId: String (FK → User)
+  balanceNGN: BigInt (kobo)
+  balanceADA: BigInt (lovelace)
+  balanceUSDM: BigInt (microUSDM)
+  createdAt: DateTime
+  updatedAt: DateTime
+}
+```
+
+**All balances store in smallest currency units** to maintain precision. A balance of ₦1,000.50 stores as 100050 kobo, eliminating floating-point arithmetic errors.
+
+## FundingRequest Model
+
+Represents SME capital requests:
+
+```typescript
+{
+  id: String (CUID)
+  smeId: String (FK → SME)
+  purpose: String
+  description: Text
+  amount: BigInt (kobo, target)
+  amountFunded: BigInt (kobo, accumulated)
+  termInMonths: Int
+  profitSharePercentage: Float
+  acceptedCurrencies: Array<Currency>
+  status: Enum (PENDING, PARTIALLY_FUNDED, 
+                APPROVED, ONGOING, COMPLETED)
+  createdAt: DateTime
+}
+```
+
+## Investment Model
+
+Records individual investor contributions:
+
+```typescript
+{
+  id: String (CUID)
+  investorId: String (FK → User)
+  fundingRequestId: String (FK → FundingRequest)
+  amount: BigInt (smallest currency unit)
+  currency: Enum (NGN, ADA, USDM)
+  exchangeRateToNGN: Float
+  amountInNGN: Int (kobo, for profit distribution)
+  blockchainTxHash: String? (for crypto)
+  releaseTxHash: String?
+  createdAt: DateTime
+}
+```
+
+Storing both original currency amount and NGN-equivalent enables **fair profit distribution** across mixed-currency investments.
+
+## PaymentInstallment Model
+
+Represents profit reporting periods:
+
+```typescript
+{
+  id: String (CUID)
+  requestId: String (FK → FundingRequest)
+  installmentNumber: Int
+  dueDate: DateTime
+  status: Enum (PENDING, UPCOMING, LATE, PAID)
+  reportedProfit: Int? (kobo)
+  lenderGrossShare: Int?
+  smeGrossShare: Int?
+  platformFeeFromLender: Int?
+  platformFeeFromSME: Int?
+  agentCommission: Int?
+  paidAt: DateTime?
+}
+```
+
+Stores both installment schedule (due dates) and actual profit reporting data for auditing.
+
+## InstallmentShare Model
+
+Tracks individual investor portions:
+
+```typescript
+{
+  id: String (CUID)
+  installmentId: String (FK → PaymentInstallment)
+  investorId: String (FK → User)
+  sharePercentage: Float
+  expectedShare: BigInt?
+  paidAmount: BigInt?
+  paidAt: DateTime?
+  UNIQUE(installmentId, investorId)
+}
+```
+
+The unique constraint ensures **one record per investor per installment**, preventing duplicate share creation.
+
+## Strategic Indexes
+
+Key indexes optimize common query patterns:
+
+```sql
+-- Authentication
+CREATE INDEX idx_user_email ON User(email);
+
+-- Funding request queries
+CREATE INDEX idx_funding_request_status ON FundingRequest(status);
+CREATE INDEX idx_funding_request_sme ON FundingRequest(smeId);
+
+-- Investment queries
+CREATE INDEX idx_investment_investor ON Investment(investorId);
+CREATE INDEX idx_investment_request ON Investment(fundingRequestId);
+
+-- Payment queries
+CREATE INDEX idx_installment_request ON PaymentInstallment(requestId);
+CREATE INDEX idx_installment_due_date ON PaymentInstallment(dueDate);
+
+-- Share lookups
+CREATE INDEX idx_share_installment ON InstallmentShare(installmentId);
+CREATE INDEX idx_share_investor ON InstallmentShare(investorId);
+```
+
+## Migrations
+
+Schema evolution uses **Prisma Migrate** for version-controlled, reproducible changes:
+
+```bash
+# Create migration
+npx prisma migrate dev --name descriptive_name
+
+# Apply to production
+npx prisma migrate deploy
+
+# Reset database (dev only)
+npx prisma migrate reset
+```
+
+All migrations undergo peer review before merging. Production deployments execute migrations in maintenance windows with database backups immediately before application.
