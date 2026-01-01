@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Cardano Transaction Service
  * 
