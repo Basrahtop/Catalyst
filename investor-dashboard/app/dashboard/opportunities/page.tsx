@@ -157,7 +157,12 @@ export default function OpportunitiesPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {opportunities.map((opportunity) => {
+            {opportunities
+              .filter((opportunity) => {
+                // Filter out fully funded requests
+                return opportunity.amountFunded < opportunity.amount;
+              })
+              .map((opportunity) => {
               // Always use current calculated score (not blockchain historical)
               const overallScore = calculateOverallScore(opportunity.sme);
               const fundingProgress = (opportunity.amountFunded / opportunity.amount) * 100;
@@ -235,7 +240,7 @@ export default function OpportunitiesPage() {
                     {isPartiallyFunded && (
                       <div className="mb-3">
                         <div className="flex justify-between text-sm mb-1">
-                          <span className="text-gray-600">
+                          <span className="font-medium text-gray-700">
                             {formatAmount(opportunity.amountFunded)} funded
                           </span>
                           <span className="font-semibold text-blue-600">
@@ -248,7 +253,7 @@ export default function OpportunitiesPage() {
                             style={{ width: `${fundingProgress}%` }}
                           ></div>
                         </div>
-                        <p className="text-xs text-gray-500 mt-1">
+                        <p className="text-sm font-semibold text-blue-700 mt-1">
                           {formatAmount(remainingAmount)} remaining
                         </p>
                       </div>

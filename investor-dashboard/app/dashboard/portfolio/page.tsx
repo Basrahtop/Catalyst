@@ -21,6 +21,9 @@ import {
 interface Investment {
   id: string;
   amount: number;
+  amountInNGN: number;
+  currency: 'NGN' | 'ADA' | 'USDM';
+  exchangeRateToNGN: number | null;
   createdAt: string;
   fundingRequest: {
     id: string;
@@ -110,6 +113,37 @@ export default function PortfolioPage() {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     })}`;
+  };
+
+  const getCurrencyBadge = (currency: string) => {
+    const badges = {
+      NGN: { label: 'Naira', bg: 'bg-green-100', text: 'text-green-800', border: 'border-green-300' },
+      ADA: { label: 'Cardano', bg: 'bg-blue-100', text: 'text-blue-800', border: 'border-blue-300' },
+      USDM: { label: 'USDM', bg: 'bg-purple-100', text: 'text-purple-800', border: 'border-purple-300' },
+    };
+    return badges[currency as keyof typeof badges] || badges.NGN;
+  };
+
+  const formatInvestmentAmount = (investment: Investment) => {
+    if (investment.currency === 'NGN') {
+      return {
+        primary: formatAmount(investment.amountInNGN),
+        secondary: null,
+      };
+    } else if (investment.currency === 'ADA') {
+      const adaAmount = Number(investment.amount) / 1_000_000; // lovelace to ADA
+      return {
+        primary: `${adaAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 6 })} ADA`,
+        secondary: formatAmount(investment.amountInNGN),
+      };
+    } else if (investment.currency === 'USDM') {
+      const usdmAmount = Number(investment.amount) / 1_000_000; // microUSDM to USDM
+      return {
+        primary: `${usdmAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USDM`,
+        secondary: formatAmount(investment.amountInNGN),
+      };
+    }
+    return { primary: formatAmount(investment.amountInNGN), secondary: null };
   };
 
   const getStatusBadge = (status: string) => {
@@ -260,32 +294,54 @@ export default function PortfolioPage() {
                             {investment.fundingRequest.sme.businessName}
                           </h3>
                         </div>
-                        <p className="text-sm text-gray-500">
-                          Invested: {new Date(investment.createdAt).toLocaleDateString('en-NG')}
-                        </p>
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm text-gray-600">
+                            {new Date(investment.createdAt).toLocaleDateString('en-NG')}
+                          </p>
+                          {(() => {
+                            const badge = getCurrencyBadge(investment.currency);
+                            return (
+                              <span className={`px-2 py-0.5 text-xs font-semibold rounded border ${badge.bg} ${badge.text} ${badge.border}`}>
+                                {badge.label}
+                              </span>
+                            );
+                          })()}
+                        </div>
                       </div>
                       {getStatusBadge(investment.fundingRequest.status)}
                     </div>
 
                     <div className="grid grid-cols-2 gap-4 mb-4">
                       <div>
-                        <p className="text-xs text-gray-600 mb-1">Your Investment</p>
-                        <p className="text-lg font-bold text-blue-600">{formatAmount(investment.amount)}</p>
+                        <p className="text-xs font-medium text-gray-700 mb-1">Your Investment</p>
+                        {(() => {
+                          const amounts = formatInvestmentAmount(investment);
+                          return (
+                            <div>
+                              <p className="text-lg font-bold text-blue-600">{amounts.primary}</p>
+                              {amounts.secondary && (
+                                <p className="text-xs font-semibold text-gray-700 mt-0.5">
+                                  ≈ {amounts.secondary}
+                                </p>
+                              )}
+                            </div>
+                          );
+                        })()}
                       </div>
                       <div>
-                        <p className="text-xs text-gray-600 mb-1">Profit Share</p>
+                        <p className="text-xs font-medium text-gray-700 mb-1">Profit Share</p>
                         <p className="text-lg font-bold text-green-600">
                           {investment.fundingRequest.profitSharePercentage}%
                         </p>
                       </div>
                       <div>
-                        <p className="text-xs text-gray-600 mb-1">Term</p>
+                        <p className="text-xs font-medium text-gray-700 mb-1">Term</p>
                         <p className="text-sm font-semibold text-gray-900">
                           {investment.fundingRequest.termInMonths} months
                         </p>
                       </div>
                       <div>
-                        <p className="text-xs text-gray-600 mb-1">Total Request</p>
+                        <p className="text-xs font-medium text-gray-700 mb-1">Total Request</p>
                         <p className="text-sm font-semibold text-gray-900">
                           {formatAmount(investment.fundingRequest.amount)}
                         </p>
@@ -293,8 +349,8 @@ export default function PortfolioPage() {
                     </div>
 
                     <div className="pt-4 border-t border-gray-200">
-                      <p className="text-xs text-gray-600 mb-1">Purpose</p>
-                      <p className="text-sm text-gray-700 line-clamp-2">
+                      <p className="text-xs font-medium text-gray-700 mb-1">Purpose</p>
+                      <p className="text-sm text-gray-900 line-clamp-2">
                         {investment.fundingRequest.purpose}
                       </p>
                     </div>

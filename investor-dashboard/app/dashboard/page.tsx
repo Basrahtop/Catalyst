@@ -71,7 +71,7 @@ export default function DashboardPage() {
     return null;
   }
 
-  const walletBalance = user.wallet?.balance || 0;
+  const walletBalance = user.wallet?.balance || 0; // Backend sends balanceNGN as 'balance' key
 
   const formatAmount = (amountInKobo: number) => {
     return new Intl.NumberFormat('en-NG', {

@@ -201,7 +201,7 @@ export default function WalletPage() {
     );
   }
 
-  const walletBalance = user?.wallet?.balance || 0;
+  const walletBalance = user?.wallet?.balance || 0; // Backend sends balanceNGN as 'balance' key
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">

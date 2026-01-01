@@ -53,7 +53,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           ...user,
           wallet: {
             ...user.wallet!,
-            balance: walletResponse.data.balance
+            balance: walletResponse.data.ngn // Use 'ngn' property (balance in kobo)
           }
         };
         localStorage.setItem('investorUser', JSON.stringify(updatedUser));

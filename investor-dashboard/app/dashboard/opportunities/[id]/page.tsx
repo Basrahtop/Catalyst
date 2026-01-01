@@ -287,7 +287,7 @@ export default function OpportunityDetailPage() {
 
   const overallScore = calculateOverallScore(opportunity.sme);
   const paymentSchedule = generatePaymentSchedule();
-  const walletBalance = user?.wallet?.balance || 0;
+  const walletBalance = user?.wallet?.balance || 0; // Backend sends balanceNGN as 'balance' key
   const requestedAmount = opportunity.amount;
   const amountFunded = opportunity.amountFunded || 0;
   const remainingAmount = requestedAmount - amountFunded;
@@ -646,183 +646,17 @@ export default function OpportunityDetailPage() {
               {/* Action Buttons */}
               <div className="space-y-3">
                 <button
-                  onClick={() => setShowApproveModal(true)}
-                  className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition-colors"
+                  onClick={() => router.push(`/dashboard/opportunities/${opportunity.id}/invest`)}
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition-colors"
                 >
-                  <CheckCircle className="h-5 w-5" />
-                  {isPartiallyFunded ? 'Add Funding' : 'Approve & Fund'}
+                  <DollarSign className="h-5 w-5" />
+                  Invest Now
                 </button>
-
-                {showDeclineButton && (
-                  <button
-                    onClick={() => setShowDeclineModal(true)}
-                    className="w-full bg-red-600 hover:bg-red-700 text-white font-semibold py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition-colors"
-                  >
-                    <XCircle className="h-5 w-5" />
-                    Decline Request
-                  </button>
-                )}
-
-                {!showDeclineButton && isPartiallyFunded && (
-                  <div className="text-xs text-gray-500 text-center p-2 bg-gray-50 rounded">
-                    This request has been partially funded and cannot be declined
-                  </div>
-                )}
-              </div>
-
-              {/* Info Box */}
-              <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                <p className="text-xs text-blue-800">
-                  <strong>Note:</strong> You can fund any amount up to the requested amount. 
-                  The SME can receive funding from multiple investors.
-                </p>
               </div>
             </div>
           </div>
         </div>
       </div>
-
-      {/* Approve Modal */}
-      {showApproveModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
-            <h3 className="text-xl font-bold text-gray-900 mb-4">Approve Investment</h3>
-            
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Funding Amount (₦)
-              </label>
-              <input
-                type="number"
-                value={fundingAmount}
-                onChange={(e) => setFundingAmount(e.target.value)}
-                min="0"
-                max={remainingAmount / 100}
-                step="0.01"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Enter amount"
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                {isPartiallyFunded ? (
-                  <>
-                    Remaining: {formatAmount(remainingAmount)} | Your Balance: {formatAmount(walletBalance)}
-                    <br />
-                    <span className="text-blue-600 font-medium">
-                      Already funded: {formatAmount(amountFunded)} ({fundingProgress.toFixed(1)}%)
-                    </span>
-                  </>
-                ) : (
-                  <>Maximum: {formatAmount(requestedAmount)} | Your Balance: {formatAmount(walletBalance)}</>
-                )}
-              </p>
-            </div>
-
-            {actionError && (
-              <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 text-sm rounded">
-                {actionError}
-              </div>
-            )}
-
-            <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded">
-              <p className="text-sm text-gray-700">
-                <strong>Profit Share:</strong> You will receive {opportunity.profitSharePercentage}% of the monthly profits reported by the SME over {opportunity.termInMonths} months.
-              </p>
-              <p className="text-xs text-gray-600 mt-1">
-                Note: Profit share is calculated on actual business profits, not on your investment amount.
-              </p>
-            </div>
-
-            <div className="flex gap-3">
-              <button
-                onClick={() => {
-                  setShowApproveModal(false);
-                  setActionError('');
-                }}
-                disabled={actionLoading}
-                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleApprove}
-                disabled={actionLoading}
-                className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 flex items-center justify-center gap-2"
-              >
-                {actionLoading ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                    Processing...
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle className="h-4 w-4" />
-                    Confirm
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Decline Modal */}
-      {showDeclineModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
-            <h3 className="text-xl font-bold text-gray-900 mb-4">Decline Request</h3>
-            
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Reason for Declining
-              </label>
-              <textarea
-                value={declineReason}
-                onChange={(e) => setDeclineReason(e.target.value)}
-                rows={4}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 resize-none"
-                placeholder="Please provide a reason..."
-              />
-            </div>
-
-            {actionError && (
-              <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 text-sm rounded">
-                {actionError}
-              </div>
-            )}
-
-            <div className="flex gap-3">
-              <button
-                onClick={() => {
-                  setShowDeclineModal(false);
-                  setActionError('');
-                  setDeclineReason('');
-                }}
-                disabled={actionLoading}
-                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleDecline}
-                disabled={actionLoading}
-                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 flex items-center justify-center gap-2"
-              >
-                {actionLoading ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                    Processing...
-                  </>
-                ) : (
-                  <>
-                    <XCircle className="h-4 w-4" />
-                    Confirm Decline
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
