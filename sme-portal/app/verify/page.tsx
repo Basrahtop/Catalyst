@@ -64,7 +64,7 @@ export default function VerifyReputationPage() {
         ? `/api/reputation/verify-tx/${searchValue}`
         : `/api/reputation/verify/${searchValue}`;
 
-      const response = await fetch(`http://localhost:8000${endpoint}`);
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL?.replace('/api', '')}${endpoint}`);
       
       if (!response.ok) {
         const errorData = await response.json();
