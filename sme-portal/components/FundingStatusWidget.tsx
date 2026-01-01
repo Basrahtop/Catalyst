@@ -96,7 +96,9 @@ export default function FundingStatusWidget() {
           
           <div className="h-8 mt-2 flex items-center justify-center">
   {error ? (
-    <AlertCircle className="w-6 h-6 text-red-500" title={error} />
+    <div className="flex items-center" title={error}>
+      <AlertCircle className="w-6 h-6 text-red-500" />
+    </div>
   ) : (
     <p className="text-2xl font-bold text-gray-900">{activeCount}</p>
   )}
