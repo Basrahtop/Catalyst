@@ -8,8 +8,8 @@ import {
   InstallmentStatus,
   Currency
 } from '@prisma/client';
-import { multiCurrencyInvestmentService } from '../services/multi-currency-investment.service';
-import { createPaymentSchedule } from '../utils/payment-schedule';
+import { multiCurrencyInvestmentService } from '../services/multi-currency-investment.service.js';
+import { createPaymentSchedule } from '../utils/payment-schedule.js';
 
 const prisma = new PrismaClient();
 
