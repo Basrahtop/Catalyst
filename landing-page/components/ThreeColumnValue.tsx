@@ -17,7 +17,8 @@ export default function ThreeColumnValue() {
         'Secure escrow protection'
       ],
       cta: 'Browse Opportunities',
-      href: '/investor/register',
+      href: 'https://catalyst-investors.vercel.app/',
+      external: true,
       gradient: 'from-blue-600 to-indigo-600'
     },
     {
@@ -31,7 +32,8 @@ export default function ThreeColumnValue() {
         'Fair interest rates'
       ],
       cta: 'Register Your Business',
-      href: '/sme/register',
+      href: 'https://catalyst-sme-portal-eckiizc0l.vercel.app/',
+      external: true,
       gradient: 'from-green-600 to-emerald-600'
     },
     {
@@ -45,7 +47,8 @@ export default function ThreeColumnValue() {
         'Dashboard coming soon'
       ],
       cta: 'Join as Agent',
-      href: '/agent/apply',
+      href: '/agent',
+      external: false,
       gradient: 'from-purple-600 to-pink-600'
     }
   ];
@@ -59,10 +62,10 @@ export default function ThreeColumnValue() {
           viewport={{ once: true }}
           className="text-center mb-16"
         >
-          <h2 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-4">
+          <h2 className="text-4xl sm:text-5xl font-poppins font-bold text-gray-900 mb-4">
             Your Path to Success Starts Here
           </h2>
-          <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+          <p className="text-xl font-inter font-light text-gray-600 max-w-3xl mx-auto">
             Whether you're an investor, business owner, or agent, Catalyst provides the tools you need to succeed
           </p>
         </motion.div>
@@ -82,20 +85,22 @@ export default function ThreeColumnValue() {
                 <column.icon className="w-8 h-8 text-white" />
               </div>
               
-              <h3 className="text-2xl font-bold text-gray-900 mb-4">{column.title}</h3>
+              <h3 className="text-2xl font-poppins font-bold text-gray-900 mb-4">{column.title}</h3>
               
               <ul className="space-y-3 mb-8">
                 {column.points.map((point, i) => (
                   <li key={i} className="flex items-start gap-3">
                     <div className={`w-1.5 h-1.5 rounded-full bg-${column.color}-600 mt-2`} />
-                    <span className="text-gray-600">{point}</span>
+                    <span className="font-inter text-gray-600">{point}</span>
                   </li>
                 ))}
               </ul>
 
               <Link
                 href={column.href}
-                className={`inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r ${column.gradient} text-white rounded-lg hover:shadow-lg transform hover:scale-105 transition-all font-medium`}
+                target={column.external ? "_blank" : undefined}
+                rel={column.external ? "noopener noreferrer" : undefined}
+                className={`inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r ${column.gradient} text-white rounded-lg hover:shadow-lg transform hover:scale-105 transition-all font-poppins font-medium`}
               >
                 {column.cta}
                 <ArrowRight className="w-4 h-4" />

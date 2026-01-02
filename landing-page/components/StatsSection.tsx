@@ -43,10 +43,10 @@ export default function StatsSection() {
           viewport={{ once: true }}
           className="text-center mb-16"
         >
-          <h2 className="text-4xl sm:text-5xl font-bold text-white mb-4">
+          <h2 className="text-4xl sm:text-5xl font-poppins font-bold text-white mb-4">
             Making Real Impact Across Africa
           </h2>
-          <p className="text-xl text-blue-200">
+          <p className="text-xl font-inter font-light text-blue-200">
             Join thousands of investors, businesses, and agents building the future
           </p>
         </motion.div>
@@ -66,11 +66,11 @@ export default function StatsSection() {
                 whileInView={{ opacity: 1 }}
                 viewport={{ once: true }}
                 transition={{ delay: index * 0.1 + 0.3 }}
-                className={`text-4xl md:text-5xl font-bold text-${stat.color}-400 mb-2`}
+                className={`text-4xl md:text-5xl font-poppins font-bold text-${stat.color}-400 mb-2`}
               >
                 {stat.value}
               </motion.p>
-              <p className="text-blue-200 font-medium">{stat.label}</p>
+              <p className="font-inter font-light text-blue-200">{stat.label}</p>
             </motion.div>
           ))}
         </div>

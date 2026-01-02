@@ -38,16 +38,16 @@ export default function Navigation() {
 
           {/* Desktop Menu */}
           <div className="hidden lg:flex items-center space-x-8">
-            <Link href="#investors" className="text-gray-700 hover:text-blue-600 transition-colors font-medium">
-              For Investors
+            <Link href="https://catalyst-investors.vercel.app/" target="_blank" rel="noopener noreferrer" className="text-gray-700 hover:text-blue-600 transition-colors font-medium">
+              Investors
             </Link>
-            <Link href="#smes" className="text-gray-700 hover:text-green-600 transition-colors font-medium">
-              For SMEs
+            <Link href="https://catalyst-sme-portal-eckiizc0l.vercel.app/" target="_blank" rel="noopener noreferrer" className="text-gray-700 hover:text-green-600 transition-colors font-medium">
+              SMEs
             </Link>
-            <Link href="#agents" className="text-gray-700 hover:text-purple-600 transition-colors font-medium">
-              For Agents
+            <Link href="/agent" className="text-gray-700 hover:text-purple-600 transition-colors font-medium">
+              Agents
             </Link>
-            <Link href="#marketplace" className="text-gray-700 hover:text-blue-600 transition-colors font-medium">
+            <Link href="https://catalyst-marketplace-4vi7grnn6.vercel.app/" target="_blank" rel="noopener noreferrer" className="text-gray-700 hover:text-blue-600 transition-colors font-medium">
               Marketplace
             </Link>
             <Link href="#how-it-works" className="text-gray-700 hover:text-blue-600 transition-colors font-medium">
@@ -85,7 +85,9 @@ export default function Navigation() {
                     className="absolute right-0 mt-2 w-56 glassmorphism rounded-xl shadow-xl overflow-hidden"
                   >
                     <Link
-                      href="/investor/register"
+                      href="https://catalyst-investors.vercel.app/"
+                      target="_blank"
+                      rel="noopener noreferrer"
                       className="block px-6 py-4 hover:bg-blue-50 transition-colors border-b border-gray-100"
                     >
                       <div className="flex items-center space-x-3">
@@ -100,7 +102,9 @@ export default function Navigation() {
                     </Link>
 
                     <Link
-                      href="/sme/register"
+                      href="https://catalyst-sme-portal-eckiizc0l.vercel.app/"
+                      target="_blank"
+                      rel="noopener noreferrer"
                       className="block px-6 py-4 hover:bg-green-50 transition-colors border-b border-gray-100"
                     >
                       <div className="flex items-center space-x-3">
@@ -115,7 +119,7 @@ export default function Navigation() {
                     </Link>
 
                     <Link
-                      href="/agent/apply"
+                      href="/agent"
                       className="block px-6 py-4 hover:bg-purple-50 transition-colors"
                     >
                       <div className="flex items-center space-x-3">
@@ -154,16 +158,16 @@ export default function Navigation() {
             className="lg:hidden glassmorphism"
           >
             <div className="px-4 py-6 space-y-4">
-              <Link href="#investors" className="block py-2 text-gray-700 hover:text-blue-600 transition-colors font-medium">
-                For Investors
+              <Link href="https://catalyst-investors.vercel.app/" target="_blank" rel="noopener noreferrer" className="block py-2 text-gray-700 hover:text-blue-600 transition-colors font-medium">
+                Investors
               </Link>
-              <Link href="#smes" className="block py-2 text-gray-700 hover:text-green-600 transition-colors font-medium">
-                For SMEs
+              <Link href="https://catalyst-sme-portal-eckiizc0l.vercel.app/" target="_blank" rel="noopener noreferrer" className="block py-2 text-gray-700 hover:text-green-600 transition-colors font-medium">
+                SMEs
               </Link>
-              <Link href="#agents" className="block py-2 text-gray-700 hover:text-purple-600 transition-colors font-medium">
-                For Agents
+              <Link href="/agent" className="block py-2 text-gray-700 hover:text-purple-600 transition-colors font-medium">
+                Agents
               </Link>
-              <Link href="#marketplace" className="block py-2 text-gray-700 hover:text-blue-600 transition-colors font-medium">
+              <Link href="https://catalyst-marketplace-4vi7grnn6.vercel.app/" target="_blank" rel="noopener noreferrer" className="block py-2 text-gray-700 hover:text-blue-600 transition-colors font-medium">
                 Marketplace
               </Link>
               <Link href="#how-it-works" className="block py-2 text-gray-700 hover:text-blue-600 transition-colors font-medium">
@@ -181,19 +185,23 @@ export default function Navigation() {
                   Login
                 </Link>
                 <Link
-                  href="/investor/register"
+                  href="https://catalyst-investors.vercel.app/"
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="block w-full py-3 text-center bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
                 >
                   Invest Now
                 </Link>
                 <Link
-                  href="/sme/register"
+                  href="https://catalyst-sme-portal-eckiizc0l.vercel.app/"
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="block w-full py-3 text-center bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
                 >
                   Get Funding
                 </Link>
                 <Link
-                  href="/agent/apply"
+                  href="/agent"
                   className="block w-full py-3 text-center bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium"
                 >
                   Become an Agent

@@ -7,13 +7,15 @@
   --color-primary-indigo: #4f46e5;
   --color-success-green: #16a34a;
   --color-premium-purple: #9333ea;
+  --font-poppins: var(--font-poppins);
+  --font-inter: var(--font-inter);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-inter);
+  --font-display: var(--font-poppins);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -26,7 +28,7 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-inter), Arial, Helvetica, sans-serif;
 }
 
 /* Custom utilities */

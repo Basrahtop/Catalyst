@@ -10,7 +10,8 @@ export default function TripleCTA() {
       title: 'Start Investing Today',
       description: 'Browse verified SMEs on our marketplace',
       cta: 'Explore Opportunities',
-      href: '/investor/register',
+      href: 'https://catalyst-investors.vercel.app/',
+      external: true,
       gradient: 'from-blue-600 to-indigo-600',
       hoverGradient: 'from-blue-700 to-indigo-700',
       icon: '💰'
@@ -19,7 +20,8 @@ export default function TripleCTA() {
       title: 'Get Your Business Funded',
       description: 'Register, work with an agent, list on marketplace',
       cta: 'Register Now',
-      href: '/sme/register',
+      href: 'https://catalyst-sme-portal-eckiizc0l.vercel.app/',
+      external: true,
       gradient: 'from-green-600 to-emerald-600',
       hoverGradient: 'from-green-700 to-emerald-700',
       icon: '🏪'
@@ -29,6 +31,7 @@ export default function TripleCTA() {
       description: 'Help SMEs grow and earn commissions',
       cta: 'Join Agent Network',
       href: '/agent/apply',
+      external: false,
       gradient: 'from-purple-600 to-pink-600',
       hoverGradient: 'from-purple-700 to-pink-700',
       icon: '🤝'
@@ -51,12 +54,14 @@ export default function TripleCTA() {
             >
               <Link
                 href={cta.href}
+                target={cta.external ? "_blank" : undefined}
+                rel={cta.external ? "noopener noreferrer" : undefined}
                 className={`block p-8 bg-gradient-to-br ${cta.gradient} rounded-2xl text-white hover:shadow-2xl transition-all h-full`}
               >
                 <div className="text-5xl mb-4">{cta.icon}</div>
-                <h3 className="text-2xl font-bold mb-3">{cta.title}</h3>
-                <p className="text-white/90 mb-6">{cta.description}</p>
-                <div className="inline-flex items-center gap-2 font-semibold group-hover:gap-4 transition-all">
+                <h3 className="text-2xl font-poppins font-bold mb-3">{cta.title}</h3>
+                <p className="font-inter text-white/90 mb-6">{cta.description}</p>
+                <div className="inline-flex items-center gap-2 font-poppins font-semibold group-hover:gap-4 transition-all">
                   {cta.cta}
                   <ArrowRight className="w-5 h-5" />
                 </div>
