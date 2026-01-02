@@ -183,6 +183,7 @@ enum FundingStatus {
   PENDING
   PARTIALLY_FUNDED
   APPROVED
+  ONGOING
   DECLINED
   COMPLETED 
 }
@@ -387,15 +388,15 @@ model Review {
 model Wallet {
   id      String @id @default(cuid())
   
-  // Legacy Naira balance (keep for backward compatibility)
-  balance Int @default(0) // Balance in kobo (DEPRECATED - use balanceNGN)
-  
   // Platform-managed balance (Naira only)
   balanceNGN BigInt @default(0) // Nigerian Naira balance in kobo (platform-controlled)
   
+  // Blockchain wallet for ADA/USDM (separate table)
   // NOTE: ADA and USDM balances are NOT stored here.
   // They are queried in real-time from the user's connected CardanoWallet
   // via Blockfrost API. See CardanoWallet model and cardano-payment.service.ts
+  
+  currency Currency @default(NGN) // Keep for reference
   
   user   User   @relation(fields: [userId], references: [id])
   userId String @unique

@@ -36,20 +36,34 @@ export default function RequestFormPage() {
   const [profitSharePercentage, setProfitSharePercentage] = useState('30'); // Default to 30%
   const [termInMonths, setTermInMonths] = useState('6'); // Default to 6 months
   const [repaymentFrequency, setRepaymentFrequency] = useState('MONTHLY_PROFIT_SHARE');
+  const [acceptedCurrencies, setAcceptedCurrencies] = useState<string[]>(['NGN']); // Multi-currency support
   
   // --- 2. UI State ---
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // --- 3. "Security Guard" ---
+  // --- 3. Currency Selection Handler ---
+  const toggleCurrency = (currency: string) => {
+    setAcceptedCurrencies(prev => {
+      if (prev.includes(currency)) {
+        // Don't allow removing last currency
+        if (prev.length === 1) return prev;
+        return prev.filter(c => c !== currency);
+      } else {
+        return [...prev, currency];
+      }
+    });
+  };
+
+  // --- 4. "Security Guard" ---
   useEffect(() => {
     if (!isAuthLoading && !token) {
       router.replace('/login');
     }
   }, [isAuthLoading, token, router]);
 
-  // --- 4. Handle Form Submission ---
+  // --- 5. Handle Form Submission ---
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -64,6 +78,7 @@ export default function RequestFormPage() {
         profitSharePercentage: parseFloat(profitSharePercentage),
         termInMonths: parseInt(termInMonths),
         repaymentFrequency,
+        acceptedCurrencies, // Send selected currencies to backend
       };
 
       // Call our real backend API
@@ -165,7 +180,44 @@ export default function RequestFormPage() {
             </div>
           </div>
 
-          {/* Section 2: How will you pay? */}
+          {/* Section 2: Accepted Currencies (NEW) */}
+          <div className="border-b border-gray-200 pb-6">
+            <h2 className="text-xl font-semibold text-gray-900">Payment Currencies</h2>
+            <p className="text-sm text-gray-500">
+              Select which currencies you're willing to accept from investors.
+            </p>
+
+            <div className="mt-4 flex flex-wrap gap-3">
+              {['NGN', 'ADA', 'USDM'].map(currency => (
+                <button
+                  key={currency}
+                  type="button"
+                  onClick={() => toggleCurrency(currency)}
+                  className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                    acceptedCurrencies.includes(currency)
+                      ? 'bg-indigo-600 text-white shadow-md'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  <span className="flex items-center gap-2">
+                    {acceptedCurrencies.includes(currency) && (
+                      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      </svg>
+                    )}
+                    {currency === 'NGN' && '₦ Nigerian Naira'}
+                    {currency === 'ADA' && '$ Cardano ADA'}
+                    {currency === 'USDM' && '$ USDM Stablecoin'}
+                  </span>
+                </button>
+              ))}
+            </div>
+            <p className="text-xs text-gray-500 mt-2">
+              💡 Tip: Accepting multiple currencies increases your chances of getting funded faster!
+            </p>
+          </div>
+
+          {/* Section 3: How will you pay? */}
           <div className="border-b border-gray-200 pb-6">
             <h2 className="text-xl font-semibold text-gray-900">Profit Share Terms</h2>
             <p className="text-sm text-gray-500">

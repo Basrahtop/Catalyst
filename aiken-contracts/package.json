@@ -1,0 +1,6 @@
+{
+  "devDependencies": {
+    "lucid-cardano": "^0.10.7",
+    "tsx": "^4.21.0"
+  }
+}

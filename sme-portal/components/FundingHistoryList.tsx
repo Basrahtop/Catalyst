@@ -6,7 +6,7 @@ import Link from 'next/link';
 
 interface FundingRequest {
   id: string;
-  status: 'PENDING' | 'APPROVED' | 'DECLINED' | 'COMPLETED';
+  status: 'PENDING' | 'PARTIALLY_FUNDED' | 'APPROVED' | 'ONGOING' | 'DECLINED' | 'COMPLETED';
   amount: number;
   purpose: string;
   createdAt: string; 
@@ -28,11 +28,23 @@ const getStatusStyles = (status: FundingRequest['status']) => {
         text: 'Completed',
         className: 'bg-green-100 text-green-800'
       };
+    case 'ONGOING':
+      return {
+        icon: <Check className="w-4 h-4" />,
+        text: 'Ongoing',
+        className: 'bg-purple-100 text-purple-800'
+      };
     case 'APPROVED':
       return {
         icon: <Check className="w-4 h-4" />,
-        text: 'Active / Ongoing', // Mapped APPROVED to "Ongoing"
+        text: 'Funded',
         className: 'bg-blue-100 text-blue-800'
+      };
+    case 'PARTIALLY_FUNDED':
+      return {
+        icon: <Hourglass className="w-4 h-4" />,
+        text: 'Partially Funded',
+        className: 'bg-yellow-100 text-yellow-800'
       };
     case 'DECLINED':
       return {

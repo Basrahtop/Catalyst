@@ -23,7 +23,8 @@ export default function WalletWidget() {
     async function fetchBalance() {
       try {
         const response = await api.get('/wallet/balance');
-        setBalance(response.data.balance);
+        // Backend now returns { ngn, ada, usdm } - SMEs only use NGN
+        setBalance(response.data.ngn || 0);
       } catch (err) {
         setError('Could not load balance');
         console.error(err);
