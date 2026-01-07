@@ -37,6 +37,30 @@ async function main() {
   app.use(cors()); // Allow cross-origin requests
   app.use(express.json()); // Allow our app to read JSON
 
+  // --- Root & Health Routes ---
+  app.get('/', (req, res) => {
+    res.json({
+      status: 'ok',
+      message: 'Catalyst API Server',
+      version: '1.0.0',
+      endpoints: {
+        health: '/api/health',
+        auth: '/api/auth',
+        products: '/api/products',
+        funding: '/api/funding-requests',
+        cardano: '/api/cardano'
+      }
+    });
+  });
+
+  app.get('/api/health', (req, res) => {
+    res.json({ 
+      status: 'ok', 
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime()
+    });
+  });
+
   // --- Routes ---
   app.use('/api/auth', authRoutes);
   app.use('/api/products', productRoutes);
