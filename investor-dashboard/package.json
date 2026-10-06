@@ -12,7 +12,7 @@
     "@emurgo/cardano-serialization-lib-browser": "^15.0.3",
     "@meshsdk/core": "^1.9.0-beta.90",
     "@meshsdk/react": "^1.9.0-beta.90",
-    "axios": "^1.7.9",
+    "axios": "^1.20.0",
     "lucid-cardano": "^0.10.7",
     "lucide-react": "^0.460.0",
     "next": "^15.1.4",
